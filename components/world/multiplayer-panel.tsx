@@ -17,11 +17,12 @@ type Props = {
   onClose: () => void;
   getLocalPlayer: () => LocalPlayerState | null;
   onRemoteChat?: (chat: MultiplayerChat) => void;
+  onPlayers?: (players: MultiplayerPlayer[], localId: string) => void;
 };
 
 const makeRoom = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 
-export function MultiplayerPanel({ open, onClose, getLocalPlayer, onRemoteChat }: Props) {
+export function MultiplayerPanel({ open, onClose, getLocalPlayer, onRemoteChat, onPlayers }: Props) {
   const client = useMemo(() => new MultiplayerClient(), []);
   const [name, setName] = useState('Traveler');
   const [room, setRoom] = useState('MOSSWOOD');
@@ -32,13 +33,18 @@ export function MultiplayerPanel({ open, onClose, getLocalPlayer, onRemoteChat }
   const [joined, setJoined] = useState(false);
   const syncTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const updatePlayers = (next: MultiplayerPlayer[]) => {
+    setPlayers(next);
+    onPlayers?.(next, client.id);
+  };
+
   const receiveChat = (entry: MultiplayerChat) => {
     setChat(current => [...current.slice(-29), entry]);
     if (entry.playerId !== client.id) onRemoteChat?.(entry);
   };
 
   const join = () => {
-    client.connect({ room, name, onPlayers: setPlayers, onChat: receiveChat, onStatus: setStatus });
+    client.connect({ room, name, onPlayers: updatePlayers, onChat: receiveChat, onStatus: setStatus });
     setJoined(true);
     if (syncTimer.current) clearInterval(syncTimer.current);
     syncTimer.current = setInterval(() => {
@@ -52,6 +58,7 @@ export function MultiplayerPanel({ open, onClose, getLocalPlayer, onRemoteChat }
     if (syncTimer.current) clearInterval(syncTimer.current);
     syncTimer.current = null;
     setPlayers([]);
+    onPlayers?.([], client.id);
     setJoined(false);
     setStatus('Not connected');
   };
