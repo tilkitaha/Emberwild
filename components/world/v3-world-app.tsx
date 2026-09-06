@@ -14,12 +14,13 @@ import { MultiplayerPanel } from './multiplayer-panel';
 import { useVoiceChat } from './use-voice-chat';
 import type { Intent } from './adventure';
 import type { MultiplayerChat } from './multiplayer';
-import type { WorldScene, CameraMode } from './scene';
+import type { CameraMode } from './scene';
+import type { V3WorldScene } from './scene-v3';
 
 const colorStyle=(color:string)=>({'--agent-color':color} as CSSProperties);
 
 export default function V3WorldApp(){
-  const canvas=useRef<HTMLDivElement>(null),world=useRef<WorldScene|null>(null),sim=useRef<SimulationV3|null>(null);
+  const canvas=useRef<HTMLDivElement>(null),world=useRef<V3WorldScene|null>(null),sim=useRef<SimulationV3|null>(null);
   const [ready,setReady]=useState(false),[error,setError]=useState(''),[,render]=useState(0);
   const [selected,setSelected]=useState<string|null>(null),[mode,setMode]=useState<CameraMode>('orbit'),[paused,setPaused]=useState(false),[speed,setSpeed]=useState(1),[sound,setSound]=useState(false);
   const [journal,setJournal]=useState(false),[help,setHelp]=useState(false),[chatOpen,setChatOpen]=useState(false),[message,setMessage]=useState(''),[reply,setReply]=useState(''),[toast,setToast]=useState(''),[saved,setSaved]=useState(false);
@@ -34,13 +35,13 @@ export default function V3WorldApp(){
   const voice=useVoiceChat(text=>voiceSendRef.current(text));
 
   useEffect(()=>{
-    let cancelled=false;let instance:WorldScene|null=null;let autosave:ReturnType<typeof setInterval>|null=null;
+    let cancelled=false;let instance:V3WorldScene|null=null;let autosave:ReturnType<typeof setInterval>|null=null;
     const simulation=new SimulationV3();const restored=simulation.restore();sim.current=simulation;
-    import('./scene').then(({WorldScene})=>{
+    import('./scene-v3').then(({V3WorldScene})=>{
       if(cancelled||!canvas.current)return;
       try{
         let lastNotice=0;
-        instance=new WorldScene(canvas.current,simulation,{onSelect:choose,onIntent:act,onReady:()=>setReady(true),onError:setError,onFrame:()=>{const notice=simulation.game.notices.at(-1);if(notice&&notice.id>lastNotice){lastNotice=notice.id;notify(notice.text);}render(n=>n+1);}});
+        instance=new V3WorldScene(canvas.current,simulation,{onSelect:choose,onIntent:act,onReady:()=>setReady(true),onError:setError,onFrame:()=>{const notice=simulation.game.notices.at(-1);if(notice&&notice.id>lastNotice){lastNotice=notice.id;notify(notice.text);}render(n=>n+1);}});
         world.current=instance;
         if(restored)notify('Welcome back. V3 remembers your V2 world.');
         autosave=setInterval(()=>setSaved(simulation.save()),10000);
@@ -108,7 +109,7 @@ export default function V3WorldApp(){
       </SheetContent>}
     </Sheet>
 
-    <MultiplayerPanel open={multiplayerOpen} onClose={()=>setMultiplayerOpen(false)} getLocalPlayer={getLocalPlayer} onRemoteChat={onRemoteChat}/>
+    <MultiplayerPanel open={multiplayerOpen} onClose={()=>setMultiplayerOpen(false)} getLocalPlayer={getLocalPlayer} onRemoteChat={onRemoteChat} onPlayers={(players,localId)=>world.current?.setRemotePlayers(players,localId)}/>
 
     <span className="world-badge"><Leaf/> V3 · smarter agents · voice · multiplayer</span>
     <span className="explore-tip">{mode==='walk'?<><Footprints size={13}/> Drag to look · WASD to walk · E to interact</>:<><MousePointer2 size={13}/> Drag to explore · select a resource to gather</>}</span>
@@ -123,7 +124,7 @@ export default function V3WorldApp(){
 
     <Sheet open={journal} onOpenChange={setJournal}><SheetContent className="journal-sheet"><SheetHeader><SheetTitle>The world remembers.</SheetTitle><SheetDescription>V3 keeps inhabitant memories, relationships, player facts and multiplayer conversations.</SheetDescription></SheetHeader><Tabs defaultValue={agent?'memories':'journal'} className="journal-tabs"><TabsList><TabsTrigger value="journal">Journal</TabsTrigger><TabsTrigger value="memories">Memories</TabsTrigger><TabsTrigger value="bonds">Bonds</TabsTrigger></TabsList><TabsContent value="journal">{s?.events.map(e=><article key={e.id} className="journal-entry"><time>Day {Math.floor(e.time/1440)+1} · {clockLabel(e.time)}</time><p><strong>{e.speaker}</strong>{e.target?` to ${e.target}`:''}<br/>{e.kind==='speech'?`“${e.text}”`:e.text}</p></article>)}</TabsContent><TabsContent value="memories">{(agent?[agent]:agents).map(a=><div key={a.id}><div className="journal-icon" style={{color:a.color}}><Brain/>{a.name} · {a.memories.length} memories</div>{a.memories.map((m,i)=><article className="journal-entry" key={`${a.id}-${i}`}><time>Day {Math.floor(m.time/1440)+1} · {clockLabel(m.time)}</time><p>{m.text}</p></article>)}</div>)}</TabsContent><TabsContent value="bonds">{agents.flatMap((a,i)=>agents.slice(i+1).filter(b=>(a.relationships[b.id]??0)>0).map(b=><div className="relationship" key={`${a.id}-${b.id}`}><span className="avatar" style={colorStyle(a.color)}>{a.name[0]}</span><div><strong>{a.name} & {b.name}</strong><p>{(a.relationships[b.id]??0)>60?'A growing friendship':(a.relationships[b.id]??0)>25?'Getting to know each other':'A first connection'}</p></div><span>{a.relationships[b.id]}%</span></div>))}<div className="journal-entry"><time>V3 player memory</time><p>{s?.rememberedPlayerFacts.length?s.rememberedPlayerFacts.join(' · '):'Tell an inhabitant something about yourself and ask them to remember it.'}</p></div></TabsContent></Tabs><p className="help-note" style={{display:'flex',gap:7,alignItems:'center',margin:0}}><Save size={14}/>{saved?'Saved on this device':'World saves on this device every 10 seconds'}</p></SheetContent></Sheet>
 
-    <Dialog open={help} onOpenChange={setHelp}><DialogContent className="help-dialog"><DialogHeader><DialogTitle>Emberwild V3</DialogTitle><DialogDescription className="help-note">A shared settlement with more autonomous inhabitants.</DialogDescription></DialogHeader><div className="help-grid"><div><Brain/><strong>Smarter agents</strong><p>Agents score competing needs, role duties, resources, relationships and recent memories before choosing their next action.</p></div><div><Mic/><strong>Voice conversations</strong><p>Open an inhabitant, press the microphone, speak naturally, and the browser transcribes your words. The inhabitant answers aloud.</p></div><div><Radio/><strong>Multiplayer rooms</strong><p>Join with a room code. Player position, level, activity, presence and room messages synchronize through the V3 multiplayer transport.</p></div><div><Hammer/><strong>V2 progression remains</strong><p>The six chapters, gathering, cooking, construction, mobile controls and saved worlds continue underneath V3.</p></div></div><p className="help-note">Internet multiplayer uses the V3 WebSocket room server when `NEXT_PUBLIC_EMBERWILD_WS_URL` is configured. Without it, the game falls back to a same-browser test room so two tabs can connect immediately.</p><p className="help-note">Space: pause · B: field guide · J: journal · M: multiplayer · E: interact · Escape: close panels.</p><button className="help-main" onClick={()=>setHelp(false)}>Back to Mosswood</button></DialogContent></Dialog>
+    <Dialog open={help} onOpenChange={setHelp}><DialogContent className="help-dialog"><DialogHeader><DialogTitle>Emberwild V3</DialogTitle><DialogDescription className="help-note">A shared settlement with more autonomous inhabitants.</DialogDescription></DialogHeader><div className="help-grid"><div><Brain/><strong>Smarter agents</strong><p>Agents score competing needs, role duties, resources, relationships and recent memories before choosing their next action.</p></div><div><Mic/><strong>Voice conversations</strong><p>Open an inhabitant, press the microphone, speak naturally, and the browser transcribes your words. The inhabitant answers aloud.</p></div><div><Radio/><strong>Multiplayer rooms</strong><p>Join with a room code. Player position, level, activity, presence and room messages synchronize; remote travelers appear in the 3D world.</p></div><div><Hammer/><strong>V2 progression remains</strong><p>The six chapters, gathering, cooking, construction, mobile controls and saved worlds continue underneath V3.</p></div></div><p className="help-note">Internet multiplayer uses the V3 WebSocket room server when `NEXT_PUBLIC_EMBERWILD_WS_URL` is configured. Without it, the game falls back to a same-browser test room so two tabs can connect immediately.</p><p className="help-note">Space: pause · B: field guide · J: journal · M: multiplayer · E: interact · Escape: close panels.</p><button className="help-main" onClick={()=>setHelp(false)}>Back to Mosswood</button></DialogContent></Dialog>
 
     {(!ready||error)&&<div className="load-screen"><Flame strokeWidth={1}/><h2>EMBERWILD V3</h2>{error?<><p>{error}</p><button className="help-main" onClick={()=>window.location.reload()}>Reload world</button></>:<><p>Connecting minds, voices, and travelers…</p><div className="load-line"><span/></div></>}</div>}
   </main>;
