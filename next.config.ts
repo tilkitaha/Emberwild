@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
-const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
-const repoBasePath = "/Emberwild";
+const assetPrefix = process.env.STATIC_CDN_PREFIX ?? "";
 
 const nextConfig: NextConfig = {
   output: "export",
@@ -9,8 +8,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  basePath: isGitHubPages ? repoBasePath : "",
-  assetPrefix: isGitHubPages ? repoBasePath : "",
+  assetPrefix,
 };
 
 export default nextConfig;
