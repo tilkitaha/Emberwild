@@ -107,5 +107,22 @@ export class SimulationV3 extends Simulation {
     return restored;
   }
 
+  get relationships() {
+    const bonds: { a: string; b: string; score: number; label: string }[] = [];
+    const seen = new Set<string>();
+    for (const agent of this.agents) {
+      for (const [otherId, score] of Object.entries(agent.relationships)) {
+        const key = [agent.id, otherId].sort().join(':');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const otherScore = this.agents.find(a => a.id === otherId)?.relationships[agent.id] ?? 0;
+        const combined = Math.max(0, Math.min(100, Math.round((score + otherScore) / 2)));
+        const label = combined >= 75 ? 'Close friends' : combined >= 55 ? 'Trusted companions' : combined >= 35 ? 'Growing bond' : 'Getting acquainted';
+        bonds.push({ a: agent.id, b: otherId, score: combined, label });
+      }
+    }
+    return bonds;
+  }
+
   get rememberedPlayerFacts() { return [...this.playerFacts]; }
 }
