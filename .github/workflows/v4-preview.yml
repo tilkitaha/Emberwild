@@ -1,0 +1,42 @@
+name: Publish Emberwild V4 preview
+
+on:
+  push:
+    branches: [v4]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: emberwild-v4-preview
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build V4 static preview
+        env:
+          STATIC_CDN_PREFIX: https://raw.githack.com/tilkitaha/Emberwild/v4-preview
+        run: npx next build
+
+      - name: Publish V4 preview branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          publish_branch: v4-preview
+          force_orphan: true
