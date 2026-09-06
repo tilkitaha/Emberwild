@@ -1,153 +1,145 @@
-# Emberwild V2 — A Living Woodland Settlement
+# Emberwild V3 — A Shared Living World
 
-[Play Emberwild V2](https://raw.githack.com/tilkitaha/Emberwild/gh-pages/index.html)
+Emberwild V3 evolves the V2 settlement adventure into a social, voice-enabled world with smarter autonomous inhabitants.
 
-Emberwild V2 turns the original living-world prototype into a playable settlement adventure. You enter Mosswood Hollow as a traveler, meet six autonomous inhabitants, gather resources, cook meals, build settlement upgrades, complete six chapters, and leave behind events that become part of the world's memory.
+> V1 proved the living-world concept. V2 added a real game loop. V3 adds multiplayer infrastructure, microphone conversations, voice replies, stronger memory retrieval, player facts, relationship-aware dialogue, and a weighted autonomous decision planner.
 
-> V1 proved the living-world concept. V2 adds a real gameplay loop, player progression, construction, objectives, persistence, and a more complete public build.
+## V3 headline features
 
-## What changed in V2
+### Multiplayer rooms
 
-- Six-chapter progression from first arrival to a final settlement feast.
-- A controllable traveler with movement, energy, experience, and four progression levels.
-- Ten replenishing gathering locations for timber, stone, berries, and herbs.
-- Backpack/inventory tracking and resource costs.
-- Cooking system that converts gathered ingredients into meals.
-- Three visible settlement projects: trail lanterns, a community garden, and a woodland lookout.
-- A field guide with objectives, recipes, building requirements, gathering locations, and recommended next actions.
-- Player interactions with inhabitants, resources, the campfire, and the world.
-- Save migration so worlds created in the earlier prototype can continue in V2.
-- Mobile/touch controls alongside keyboard and mouse controls.
-- Automated progression and compatibility tests.
-- Static production build published from the `gh-pages` branch.
+- Join by traveler name + room code.
+- Sync player position, heading, level, activity, presence and room chat.
+- WebSocket transport for internet multiplayer through the V3 room server.
+- Same-browser `BroadcastChannel` fallback lets two tabs test multiplayer immediately without a server.
+- Room traffic is intentionally lightweight so it can later support visible remote avatars and shared co-op actions.
 
-## Development story
+The client reads the production WebSocket endpoint from:
 
-The full V1 → V2 build history is documented in **[V2_DEVELOPMENT.md](./V2_DEVELOPMENT.md)**.
+```bash
+NEXT_PUBLIC_EMBERWILD_WS_URL=wss://your-host.example/multiplayer
+```
 
-The version-by-version changes are tracked in **[CHANGELOG.md](./CHANGELOG.md)**.
+The repository includes `worker/room-hub.ts` and the `/multiplayer` routing logic needed for a Cloudflare Durable Object room server. The Durable Object binding must be configured in the production hosting environment before internet rooms are considered live.
 
-## Core gameplay loop
+### Smarter autonomous agents
 
-1. Explore Mosswood Hollow.
-2. Meet and talk with the inhabitants.
-3. Gather timber, stone, berries, and herbs.
-4. Manage your traveler's energy and backpack.
-5. Cook meals and share resources.
-6. Complete chapter objectives.
-7. Build improvements that physically appear in the world.
-8. Watch inhabitants continue their own routines, friendships, conversations, and memories.
-9. Return later and continue from your saved world.
+V3 adds a separate cognition layer on top of the V2 simulation. Inhabitants now score competing priorities instead of relying only on fixed route rotation.
 
-## The settlement adventure
+Inputs include:
 
-The six chapters gradually introduce the systems instead of exposing everything at once. The journey begins with meeting the settlement, then moves through gathering, cooking, helping the community, construction, and finally a shared settlement feast.
+- energy,
+- hunger,
+- social need,
+- weather,
+- time of day,
+- role-specific responsibilities,
+- shared food and wood shortages,
+- relationship strength,
+- recent memories,
+- whether a settlement gathering is happening,
+- what the agent was already doing.
 
-The three construction projects are:
+The resulting plan includes a destination, goal, reason and score. Agents also remember why they selected important actions.
 
-- **Trail Lanterns** — improve the visual identity of the settlement paths.
-- **Community Garden** — becomes a persistent world upgrade and improves berry/herb gathering.
-- **Woodland Lookout** — a larger late-game construction objective.
+### Memory-aware conversations
 
-Completed projects appear in the Three.js world and can also become part of the inhabitants' remembered events.
+Dialogue now uses:
 
-## Living-world simulation
+- relevant memory retrieval,
+- mood,
+- current autonomous plan,
+- role and personality traits,
+- strongest relationship,
+- settlement resources,
+- weather,
+- facts the traveler explicitly tells the inhabitants.
 
-The original simulation remains active underneath the V2 progression system. The six inhabitants continue to:
+Examples:
 
-- work and move around the settlement,
-- eat and rest according to their needs,
-- talk to one another,
-- form and maintain relationships,
-- remember shared events,
-- react to rain, evening, gatherings, and other world events.
+- `Remember that I want to become a ranger.`
+- `What do you remember about me?`
+- `Why did you choose that?`
+- `Who is your closest friend?`
+- `What are you planning to do next?`
 
-Dialogue is currently contextual and rule/goal based. **No live LLM is connected and no API key is required.**
+Player facts are saved locally and carried across sessions alongside the V2 world save.
 
-## Controls
+### Microphone conversations
 
-| Control | Action |
-| --- | --- |
-| Select a resource or field-guide task | Walk to it and interact |
-| Drag / scroll or pinch | Orbit the camera / zoom |
-| WASD / Arrow keys | Move in Walk mode |
-| Drag in Walk mode | Look around |
-| Shift | Move faster |
-| E | Interact / gather / rest near the fire |
-| B | Open the field guide |
-| J | Open the world journal |
-| Space | Pause / resume the world |
-| Escape | Leave Walk mode / close a panel |
+Open an inhabitant and press the microphone button.
 
-Touch controls include movement arrows, an Interact button, tappable gathering spots, and touch camera controls.
+- Browser speech recognition converts speech to text.
+- The message is sent directly to the selected inhabitant.
+- The V3 cognition layer produces the reply.
+- Browser speech synthesis reads the answer aloud.
+- Typing still works normally.
 
-## Save system
+Microphone access requires browser permission and a secure origin in production.
 
-Progress is saved locally in the browser every 10 seconds and when the tab is hidden.
+## V2 gameplay retained
 
-V2 includes migration support for earlier Emberwild saves. Existing villagers, memories, relationships, simulation time, and shared resources are retained where possible. The older save is preserved during migration, and incomplete traveler tasks are cancelled safely on reload without consuming supplies.
+V3 keeps the settlement adventure underneath the new systems:
 
-## Testing
+- six progression chapters,
+- resource gathering,
+- backpack/inventory,
+- cooking and sharing meals,
+- traveler energy + XP + four levels,
+- trail lanterns,
+- community garden,
+- woodland lookout,
+- field guide,
+- mobile controls,
+- autonomous inhabitant routines,
+- relationships and memories,
+- rain, evening and campfire events,
+- save migration from earlier Emberwild worlds.
 
-The V2 development pass added automated checks for:
+## Key V3 files
 
-- completing the full six-chapter journey,
-- gathering and resource depletion,
-- construction costs,
-- cooking and recipe costs,
-- player energy recovery,
-- recommended-action navigation,
-- duplicate reward protection,
-- weather restrictions,
-- save migration and compatibility.
+- `components/world/v3-world-app.tsx` — V3 interface and feature integration.
+- `components/world/simulation-v3.ts` — cognition layer connected to the V2 simulation.
+- `components/world/agent-brain.ts` — weighted planning, memory retrieval and contextual response generation.
+- `components/world/use-voice-chat.ts` — microphone speech recognition and spoken NPC replies.
+- `components/world/multiplayer.ts` — multiplayer room client, presence, state and room chat.
+- `components/world/multiplayer-panel.tsx` — room UI.
+- `worker/room-hub.ts` — WebSocket room hub.
+- `worker/index.ts` — routes `/multiplayer` to the room hub.
+- `app/v3.css` — V3 UI additions.
 
-The production/static build also passes TypeScript compilation after separating Cloudflare-only development files from the public static build.
-
-## Architecture
-
-- `components/world/simulation.ts` — inhabitants, needs, dialogue, relationships, world events, persistence.
-- `components/world/adventure.ts` — traveler, inventory, gathering, recipes, construction, chapter progression.
-- `components/world/scene.ts` — procedural Three.js forest, characters, weather, resources, buildings, cameras.
-- `components/world/adventure-hud.tsx` — field guide, backpack, objectives, recipes, construction UI.
-- `components/world/world-app.tsx` — main interface, lifecycle, panels, journal, interactions.
-- `tests/adventure.test.mjs` — progression and gameplay-system tests.
+See **[V3_DEVELOPMENT.md](./V3_DEVELOPMENT.md)** for the implementation stages and current production limitations.
 
 ## Run locally
 
-Requires Node.js 22.13+ and npm.
+Requires Node.js 22.13+.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Useful checks:
+To test multiplayer without a room server, open the game in two browser tabs and join the same room code.
 
-```bash
-npm run test:game
-npm run build
-npm test
+## Verification
+
+The `v3` branch has its own GitHub Actions workflow:
+
+```text
+Emberwild V3 CI
 ```
 
-## Branches
+It installs dependencies, runs the production Next.js build and executes the existing Emberwild gameplay tests.
 
-- `main` — current Emberwild V2 source.
-- `v2` — stable V2 snapshot/branch.
-- `gh-pages` — generated static public build.
+## Current V3 status
 
-## Current limitations
-
-- Single-player only.
-- Progress is local to each browser/device.
-- WebGL 2 is required.
-- Inhabitant dialogue is simulated locally rather than generated by a live language model.
-- No online accounts or cloud save yet.
-- No multiplayer or shared persistent server world yet.
-
-## Next direction
-
-Possible future development includes real LLM-powered inhabitants, long-term semantic memory, deeper relationship systems, procedural quests, cloud saves, economy/trading, more settlement construction, and a larger explorable map.
-
----
-
-**Emberwild V2** is the second major development stage of the original one-prompt living-world prototype: from an autonomous forest simulation into a small but complete playable settlement game.
+- Smarter local agents: implemented.
+- Player-fact memory: implemented.
+- Microphone transcription: implemented.
+- Spoken NPC replies: implemented.
+- Room/presence/chat client: implemented.
+- Local two-tab multiplayer fallback: implemented.
+- WebSocket room server code: implemented.
+- Production internet multiplayer: requires deployment with `ROOM_HUB` Durable Object binding + `NEXT_PUBLIC_EMBERWILD_WS_URL`.
+- Visible 3D remote player avatars: next V3 multiplayer iteration.
+- Live LLM-backed NPCs: not connected yet; current V3 intelligence runs locally and requires no API key.
