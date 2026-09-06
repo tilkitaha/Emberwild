@@ -2,19 +2,35 @@
 
 [Play the public demo](https://emberwild-living-world.snowy-apple-0180.chatgpt.site)
 
-A playable woodland simulation with six autonomous inhabitants.
+A woodland settlement game with six autonomous inhabitants. Explore as a traveler, meet your neighbors, gather supplies, and help Mosswood Hollow grow.
 
-- Three.js renders the terrain, forest, settlement, animated characters, water, weather, and day/night cycle.
-- A goal-based simulation chooses work, food, rest, and social activities. A* pathfinding avoids buildings and water.
-- Nearby conversations create memories and relationships. Shared work finishes a visible garden bench.
-- Orbit, follow, and first-person walking support mouse, keyboard, and touch.
-- State is saved locally on the current device. The simulation stops advancing in hidden tabs.
+This branch adds the settlement adventure. The public demo remains on the earlier release until the update is published.
 
-Dialogue uses contextual rules; no external language model is connected. There are no API keys or external model charges. All environment geometry is generated at runtime, and the application ships its dependencies.
+## The settlement adventure
 
-The application is in components/world; simulation.ts is independent of rendering. Run npm run build for the production build.
+- Six chapters take you from meeting your neighbors to hosting a settlement feast.
+- Gather timber, stone, berries, and herbs from ten replenishing spots. Cooking converts berries and herbs into meals.
+- Build trail lanterns, a community garden, and a woodland lookout. Completed buildings appear in the forest and become part of the villagers’ memories. The garden increases berry and herb harvests.
+- Gain experience, progress through four traveler levels, and manage your energy by resting or sharing meals.
+- A field guide tracks objectives, inventory, building costs, camp recipes, and gathering locations. Its recommended action walks you to the next useful task, including collecting missing materials.
+- The original world continues around you: villagers work, eat, rest, talk, make friends, and remember shared events. Rain, gatherings, and sunset change their routines.
 
-Validation: 20 simulated minutes, movement and needs invariants, shared construction, weather response, commands, all place-to-place paths, local save/restore, application type check, production build.
+## Controls
+
+| Control | Action |
+| --- | --- |
+| Select a resource or field-guide task | Walk to it and interact |
+| Drag / scroll or pinch | Orbit the camera / zoom |
+| Walk + WASD or arrow keys | Move your traveler in first person |
+| Drag in Walk mode | Look around |
+| Shift while walking | Move faster |
+| E | Interact with a nearby resource or inhabitant; rest near the fire |
+| B | Open the field guide |
+| J | Open the world journal |
+| Space | Pause or resume |
+| Escape | Leave Walk mode / close a panel |
+
+Touch controls include walking arrows, an Interact button, and tappable gathering spots. Select a villager to talk, follow their routine, or inspect their memories.
 
 ## Run locally
 
@@ -25,10 +41,30 @@ npm ci
 npm run dev
 ```
 
-Open the local address printed by the development server. Run `npm run build` for a production build.
+Open the local address printed by the development server.
+
+```bash
+npm run test:game  # simulation, progression, and save migration tests
+npm run build     # production build
+npm test          # production build and all repository tests
+```
+
+## Progress and architecture
+
+Progress saves to this browser on this device every 10 seconds and when the tab is hidden. The simulation stops advancing in hidden tabs. Older Emberwild saves migrate automatically, preserving the villagers, memories, relationships, time, and shared stores. The earlier save is retained. Unfinished traveler tasks are cancelled on reload without spending supplies.
+
+- `components/world/simulation.ts`: villagers, needs, contextual dialogue, navigation, world events, and persistence.
+- `components/world/adventure.ts`: traveler movement, inventory, gathering, crafting, construction, and chapter progression.
+- `components/world/scene.ts`: procedural Three.js forest, characters, resources, buildings, weather, and cameras.
+- `components/world/adventure-hud.tsx`: field guide, trail map, backpack, objectives, and task controls.
+- `components/world/world-app.tsx`: the world interface, villager panels, journal, and lifecycle.
 
 ## Creation and limitations
 
-Created from one initial prompt and a reference screenshot. The user supplied the creative direction; ChatGPT generated the implementation, checked simulation logic, and deployed the prototype. Dialogue is contextual and rule-based, without a live language model. Browser visual testing was not performed.
+The initial prototype was created from one prompt and a reference screenshot. This release adds a further development pass with a playable settlement progression system.
 
-The source manifest omits the original deployment identity so forks do not point at the existing live Site.
+Dialogue uses contextual rules and goal-based behavior. No live language model is connected, no API key is required, and there are no external model charges. All environment geometry is generated at runtime. The game is single-player, requires WebGL 2, and stores progress locally; opening the public link on another device starts a separate world.
+
+Automated checks cover chapter completion using the recommended actions, resource depletion, energy recovery, construction and recipe costs, duplicate rewards, navigation, weather restrictions, and save migration. Browser visual testing has not been performed.
+
+The GitHub copy of the hosting manifest omits the original deployment identity so forks do not point at the existing live Site.

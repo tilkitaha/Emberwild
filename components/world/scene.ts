@@ -3,10 +3,11 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Simulation, terrainHeight, walkable, OBSTACLES } from './simulation';
+import { RESOURCES, PROJECTS, ITEMS, CAMP, type Intent, type ProjectId } from './adventure';
 
 export type CameraMode = 'orbit'|'follow'|'walk';
 type Person = {root:THREE.Group;leftLeg:THREE.Group;rightLeg:THREE.Group;leftArm:THREE.Group;rightArm:THREE.Group;head:THREE.Group;ring:THREE.Mesh};
-type Hooks = {onSelect:(id:string)=>void;onReady:()=>void;onError:(s:string)=>void;onFrame:()=>void};
+type Hooks = {onSelect:(id:string)=>void;onIntent:(intent:Intent)=>void;onReady:()=>void;onError:(s:string)=>void;onFrame:()=>void};
 const TAU=Math.PI*2;
 function randomGenerator(seed:number){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 
@@ -18,6 +19,12 @@ export class WorldScene {
   private rain:THREE.LineSegments;private fireflies:THREE.Points;private stars:THREE.Points;private smoke:THREE.Points;private bench=new THREE.Group();private windows:THREE.MeshStandardMaterial;
   private raycaster=new THREE.Raycaster();private pointer=new THREE.Vector2();private down={x:0,y:0};private yaw=Math.PI;private pitch=0;private dragging=false;private visualTime=0;private uiTick=0;private lightTick=0;private sound:AudioContext|null=null;private volume:GainNode|null=null;private soundOn=false;private audioTimer:ReturnType<typeof setInterval>|null=null;
   private readonly rand=randomGenerator(9184);private readonly dummy=new THREE.Object3D();private readonly temp=new THREE.Vector3();private readonly target=new THREE.Vector3();
+  private playerBody!:Person;
+  private resourceMeshes=new Map<string,THREE.Group>();
+  private projectMeshes=new Map<ProjectId,{preview:THREE.Group;finished:THREE.Group}>();
+  private adventureLabels=new Map<string,{button:HTMLButtonElement;point:{x:number;z:number};intent:Intent}>();
+  private waypoint=new THREE.Mesh(new THREE.RingGeometry(.68,.74,40),new THREE.MeshBasicMaterial({color:'#b5e3c7',side:THREE.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));
+  private pointerPrevious={x:0,y:0};
   constructor(private container:HTMLDivElement,public sim:Simulation,private hooks:Hooks){
     const mobile=window.innerWidth<800;
     this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
@@ -41,12 +48,61 @@ export class WorldScene {
     this.rain=this.makeRain();this.fireflies=this.makeFireflies();this.stars=this.makeStars();this.scene.add(this.rain,this.fireflies,this.stars);
     this.makeBench();this.scene.add(this.bench);
     for(const a of sim.agents){const p=this.makePerson(a.color,a.skin,a.hair,sim.agents.indexOf(a));p.root.position.set(a.x,terrainHeight(a.x,a.z),a.z);this.scene.add(p.root);this.people.set(a.id,p);const label=document.createElement('button');label.className='world-label hidden';label.style.setProperty('--agent-color',a.color);label.setAttribute('aria-label',`Meet ${a.name}, ${a.role.toLowerCase()}`);const speech=document.createElement('div');speech.className='speech';speech.hidden=true;const name=document.createElement('span');name.className='name';const dot=document.createElement('span');dot.className='label-dot';name.append(dot,document.createTextNode(a.name));label.append(speech,name);label.addEventListener('click',()=>this.hooks.onSelect(a.id));container.appendChild(label);this.labels.set(a.id,label);}
+    this.makeAdventure();
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(container);this.resize();
     this.renderer.domElement.addEventListener('pointerdown',this.onDown);this.renderer.domElement.addEventListener('pointermove',this.onMove);this.renderer.domElement.addEventListener('pointerup',this.onUp);this.renderer.domElement.addEventListener('pointercancel',this.onCancel);
     this.renderer.domElement.addEventListener('webglcontextlost',this.onContextLost);window.addEventListener('keydown',this.onKeyDown);window.addEventListener('keyup',this.onKeyUp);window.addEventListener('blur',this.onBlur);document.addEventListener('visibilitychange',this.onVisibility);
     this.updateLight();this.frame=requestAnimationFrame(this.animate);this.hooks.onReady();
   }
   private material(color:THREE.ColorRepresentation,roughness=.9){return new THREE.MeshStandardMaterial({color,roughness});}
+  private makeAdventure(){
+    this.playerBody=this.makePerson('#90c9b5','#ba9274','#392b22',6);this.playerBody.ring.visible=true;this.scene.add(this.playerBody.root);
+    this.mesh(new THREE.BoxGeometry(.4,.45,.2),this.material('#735a40'),0,1.1,-.24,this.playerBody.root);
+    this.waypoint.rotation.x=-Math.PI/2;this.scene.add(this.waypoint);
+    const wood=this.material('#9a7851'),bark=this.material('#594434'),leaves=this.material('#64864c'),stone=this.material('#9ca39b'),berry=this.material('#934c65');
+    for(const node of RESOURCES){
+      const root=new THREE.Group();root.position.set(node.x,terrainHeight(node.x,node.z),node.z);root.userData.intent={kind:'gather',id:node.id};this.scene.add(root);this.resourceMeshes.set(node.id,root);
+      if(node.item==='wood'){
+        for(let i=0;i<3;i++){const log=this.mesh(new THREE.CylinderGeometry(.19,.23,2.2-i*.2,9),bark,(i-1)*.33,.25+(i===1?.22:0),0,root);log.rotation.x=Math.PI/2;log.rotation.z=i*.09;this.mesh(new THREE.CylinderGeometry(.175,.175,.025,9),wood,(i-1)*.33,.25+(i===1?.22:0),1.11-i*.1,root).rotation.x=Math.PI/2;}
+      }else if(node.item==='stone'){
+        for(let i=0;i<5;i++){const rock=this.mesh(new THREE.DodecahedronGeometry(.38+(i%2)*.15,0),stone,Math.cos(i*1.4)*.4,.22,Math.sin(i*1.4)*.4,root);rock.rotation.set(i,i*.3,.15);rock.scale.y=.8;}
+      }else{
+        for(let i=0;i<5;i++){const a=i/5*TAU;const plant=this.mesh(new THREE.IcosahedronGeometry(node.item==='berries'?.46:.27,1),leaves,Math.cos(a)*.36,.36,Math.sin(a)*.36,root);plant.scale.y=node.item==='herbs'?1.6:.8;}
+        if(node.item==='berries')for(let i=0;i<15;i++){const a=i*2.4;this.mesh(new THREE.SphereGeometry(.063,6,5),berry,Math.cos(a)*(.35+(i%2)*.22),.48+(i%3)*.08,Math.sin(a)*.55,root);}
+      }
+      this.addAdventureLabel(node.id,node,{kind:'gather',id:node.id},`${ITEMS[node.item].label} +${node.yield}`,ITEMS[node.item].color);
+    }
+    for(const project of Object.values(PROJECTS)){
+      const preview=new THREE.Group(),finished=new THREE.Group();
+      for(const root of [preview,finished]){root.position.set(project.x,terrainHeight(project.x,project.z),project.z);root.userData.intent={kind:'build',id:project.id};this.scene.add(root);}
+      const ring=this.mesh(new THREE.RingGeometry(1.3,1.35,40),new THREE.MeshBasicMaterial({color:'#ddc091',transparent:true,opacity:.55,side:THREE.DoubleSide}),0,.04,0,preview);ring.rotation.x=-Math.PI/2;ring.castShadow=false;
+      for(const [x,z] of [[-1,-1],[1,-1],[-1,1],[1,1]])this.mesh(new THREE.CylinderGeometry(.045,.06,.7,6),wood,x,.35,z,preview);
+      if(project.id==='lanterns'){
+        for(let i=0;i<4;i++){const x=(i%2?1:-1)*1.7,z=-Math.floor(i/2)*4;this.mesh(new THREE.CylinderGeometry(.09,.14,2.65,8),bark,x,1.32,z,finished);this.mesh(new THREE.BoxGeometry(.8,.1,.12),wood,x+.3,2.5,z,finished);this.mesh(new THREE.BoxGeometry(.32,.42,.32),this.windows,x+.6,2.13,z,finished);this.mesh(new THREE.ConeGeometry(.29,.2,4),bark,x+.6,2.45,z,finished);const light=new THREE.PointLight('#ffd29b',3,6,2);light.position.set(x+.6,2.1,z);finished.add(light);}
+      }else if(project.id==='garden'){
+        for(const x of [-1.6,1.6])this.mesh(new THREE.BoxGeometry(.13,.35,2.6),wood,x,.17,0,finished);
+        for(const z of [-1.3,1.3])this.mesh(new THREE.BoxGeometry(3.3,.35,.13),wood,0,.17,z,finished);
+        this.mesh(new THREE.BoxGeometry(3.1,.12,2.45),this.material('#473b2b'),0,.1,0,finished);
+        for(let i=0;i<16;i++){const plant=this.mesh(new THREE.IcosahedronGeometry(.25,1),leaves,(i%4)*.7-1,.4,Math.floor(i/4)*.55-.8,finished);plant.scale.y=1.4;}
+        this.mesh(new THREE.BoxGeometry(.75,.75,.1),wood,2,.8,-1,finished);this.mesh(new THREE.CylinderGeometry(.05,.05,1.2,6),bark,2,.6,-1,finished);
+      }else{
+        for(let i=0;i<12;i++)this.mesh(new THREE.BoxGeometry(3.5,.13,.27),wood,0,.42,i*.28-1.55,finished);
+        for(const x of [-1.65,1.65])for(const z of [-1.65,1.65])this.mesh(new THREE.BoxGeometry(.16,1.5,.16),bark,x,.77,z,finished);
+        for(const x of [-1.65,1.65])this.mesh(new THREE.BoxGeometry(.1,.13,3.45),wood,x,1.35,0,finished);
+        this.mesh(new THREE.BoxGeometry(3.45,.13,.1),wood,0,1.35,1.65,finished);
+        for(let i=0;i<2;i++)this.mesh(new THREE.BoxGeometry(1.5,.15,.45),wood,0,.12+i*.14,-2.3+i*.4,finished);
+      }
+      this.projectMeshes.set(project.id,{preview,finished});
+      this.addAdventureLabel(project.id,project,{kind:'build',id:project.id},project.name,'#dfc18b');
+    }
+    this.addAdventureLabel('camp',CAMP,{kind:'camp',id:'cook'},'Campfire','#edc38d');
+  }
+  private addAdventureLabel(id:string,point:{x:number;z:number},intent:Intent,label:string,color:string){
+    const button=document.createElement('button');button.className='world-label resource-label hidden';button.style.setProperty('--agent-color',color);button.setAttribute('aria-label',`${label}. Walk here and interact.`);const name=document.createElement('span');name.className='name';const dot=document.createElement('span');dot.className='label-dot';name.append(dot,document.createTextNode(label));button.append(name);button.addEventListener('click',()=>this.hooks.onIntent(intent));this.container.append(button);this.adventureLabels.set(id,{button,point,intent});
+  }
+  focusPlayer(){
+    if(this.mode==='walk')return;this.setMode('orbit');const p=this.sim.game.player;this.target.set(p.x,1,p.z);const delta=this.target.clone().sub(this.controls.target);this.controls.target.copy(this.target);this.camera.position.add(delta);
+  }
   private mesh(geo:THREE.BufferGeometry,mat:THREE.Material,x=0,y=0,z=0,parent:THREE.Object3D=this.scene){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
   private makeTerrain(){
     const geometry=new THREE.PlaneGeometry(440,440,180,180);geometry.rotateX(-Math.PI/2);const pos=geometry.attributes.position;const colors=new Float32Array(pos.count*3);const c=new THREE.Color();
@@ -228,17 +284,18 @@ export class WorldScene {
   setMode(mode:CameraMode){
     if(mode==='follow'&&!this.selected){this.selected='rowan';this.hooks.onSelect('rowan');}
     if(mode==='walk'){
-      this.controls.enabled=false;this.camera.position.set(4,terrainHeight(4,13)+1.85,13);this.yaw=.25;this.pitch=0;this.camera.rotation.order='YXZ';
+      const p=this.sim.game.player;this.controls.enabled=false;this.camera.position.set(p.x,terrainHeight(p.x,p.z)+1.7,p.z);this.yaw=p.heading+Math.PI;this.pitch=0;this.camera.rotation.order='YXZ';
     }else{
       if(this.mode==='walk'){this.camera.position.set(24,15,28);this.controls.target.set(0,1,0);}this.controls.enabled=true;this.camera.rotation.order='XYZ';this.controls.update();
     }
     this.keys.clear();this.mode=mode;
   }
-  private onDown=(e:PointerEvent)=>{this.down={x:e.clientX,y:e.clientY};if(this.mode==='walk'){this.dragging=true;this.renderer.domElement.setPointerCapture(e.pointerId);}};
-  private onMove=(e:PointerEvent)=>{if(this.mode==='walk'&&this.dragging){this.yaw-=e.movementX*.003;this.pitch=Math.max(-1.1,Math.min(1.1,this.pitch-e.movementY*.003));}};
-  private onUp=(e:PointerEvent)=>{this.dragging=false;if(Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)>7)return;const rect=this.container.getBoundingClientRect();this.pointer.set((e.clientX-rect.left)/this.width*2-1,-(e.clientY-rect.top)/this.height*2+1);this.raycaster.setFromCamera(this.pointer,this.camera);const hits=this.raycaster.intersectObjects([...this.people.values()].map(p=>p.root),true);if(hits[0]){let obj:THREE.Object3D|null=hits[0].object;while(obj){for(const [id,p] of this.people)if(obj===p.root){this.hooks.onSelect(id);return;}obj=obj.parent;}}};
+  private onDown=(e:PointerEvent)=>{this.down={x:e.clientX,y:e.clientY};this.pointerPrevious={...this.down};if(this.mode==='walk'){this.dragging=true;this.renderer.domElement.setPointerCapture(e.pointerId);}};
+  private onMove=(e:PointerEvent)=>{if(this.mode==='walk'&&this.dragging){this.yaw-=(e.clientX-this.pointerPrevious.x)*.003;this.pitch=Math.max(-1.1,Math.min(1.1,this.pitch-(e.clientY-this.pointerPrevious.y)*.003));this.pointerPrevious={x:e.clientX,y:e.clientY};}};
+  private onUp=(e:PointerEvent)=>{this.dragging=false;if(Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)>7)return;const rect=this.container.getBoundingClientRect();this.pointer.set((e.clientX-rect.left)/this.width*2-1,-(e.clientY-rect.top)/this.height*2+1);this.raycaster.setFromCamera(this.pointer,this.camera);const hits=this.raycaster.intersectObjects([...this.people.values()].map(p=>p.root).concat([...this.resourceMeshes.values()]),true);if(hits[0]){let obj:THREE.Object3D|null=hits[0].object;while(obj){if(obj.userData.intent){this.hooks.onIntent(obj.userData.intent as Intent);return;}for(const [id,p] of this.people)if(obj===p.root){this.hooks.onSelect(id);return;}obj=obj.parent;}}};
   private onCancel=()=>{this.dragging=false;this.keys.clear();};
-  private onKeyDown=(e:KeyboardEvent)=>{if((e.target as HTMLElement)?.closest('input,textarea,[role="dialog"]'))return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();this.keys.add(e.key.toLowerCase());};
+  inputEnabled=true;
+  private onKeyDown=(e:KeyboardEvent)=>{if(!this.inputEnabled||(e.target as HTMLElement)?.closest('input,textarea,[role="dialog"]')||(e.key===' '&&(e.target as HTMLElement)?.closest('button,a,[role="button"]')))return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key.toLowerCase()==='e'&&!e.repeat&&!this.paused)this.sim.game.interactNearby();this.keys.add(e.key.toLowerCase());};
   private onKeyUp=(e:KeyboardEvent)=>this.keys.delete(e.key.toLowerCase());
   private onBlur=()=>this.keys.clear();
   private onVisibility=()=>{this.last=0;this.keys.clear();if(document.hidden){this.sim.save();void this.sound?.suspend();}else if(this.soundOn)void this.sound?.resume();};
@@ -262,10 +319,22 @@ export class WorldScene {
     for(const a of this.sim.agents){const p=this.people.get(a.id)!;p.root.position.set(a.x,terrainHeight(a.x,a.z),a.z);let diff=a.heading-p.root.rotation.y;diff=Math.atan2(Math.sin(diff),Math.cos(diff));p.root.rotation.y+=diff*Math.min(1,dt*9);const move=a.moving&&!this.paused;const swing=move?Math.sin(this.sim.elapsed*7.5)*.54:0;p.leftLeg.rotation.x=swing;p.rightLeg.rotation.x=-swing;p.leftArm.rotation.x=-swing*.7;p.rightArm.rotation.x=swing*.7;p.root.position.y+=move?Math.abs(Math.sin(this.sim.elapsed*7.5))*.035:Math.sin(t*1.8+this.sim.agents.indexOf(a))*.008;p.ring.visible=a.id===this.selected;p.head.rotation.y=a.speech?Math.sin(t*1.2)*.09:0;}
     if(this.mode==='follow'&&this.selected){const a=this.sim.agents.find(a=>a.id===this.selected)!;this.target.set(a.x,1.1,a.z);const delta=this.target.clone().sub(this.controls.target).multiplyScalar(Math.min(1,dt*3));this.controls.target.add(delta);this.camera.position.add(delta);if(this.camera.position.distanceTo(this.controls.target)>14){this.temp.copy(this.camera.position).sub(this.controls.target).normalize().multiplyScalar(13).add(this.controls.target);this.camera.position.lerp(this.temp,dt*1.8);}}
     if(this.mode==='walk'){
-      this.camera.rotation.set(this.pitch,this.yaw,0,'YXZ');let dx=0,dz=0;const f=(this.keys.has('w')||this.keys.has('arrowup')?1:0)-(this.keys.has('s')||this.keys.has('arrowdown')?1:0);const side=(this.keys.has('d')||this.keys.has('arrowright')?1:0)-(this.keys.has('a')||this.keys.has('arrowleft')?1:0);dx=(-Math.sin(this.yaw)*f+Math.cos(this.yaw)*side)*dt*4;dz=(-Math.cos(this.yaw)*f-Math.sin(this.yaw)*side)*dt*4;const x=this.camera.position.x+dx,z=this.camera.position.z+dz;if(walkable(x,z)){this.camera.position.x=x;this.camera.position.z=z;}this.camera.position.y=terrainHeight(this.camera.position.x,this.camera.position.z)+1.85;
+      this.camera.rotation.set(this.pitch,this.yaw,0,'YXZ');const f=(this.keys.has('w')||this.keys.has('arrowup')?1:0)-(this.keys.has('s')||this.keys.has('arrowdown')?1:0);const side=(this.keys.has('d')||this.keys.has('arrowright')?1:0)-(this.keys.has('a')||this.keys.has('arrowleft')?1:0);const norm=Math.max(1,Math.hypot(f,side));const stride=dt*(this.keys.has('shift')?6:3.8)/norm;if(!this.paused)this.sim.game.move((-Math.sin(this.yaw)*f+Math.cos(this.yaw)*side)*stride,(-Math.cos(this.yaw)*f-Math.sin(this.yaw)*side)*stride);const player=this.sim.game.player;this.camera.position.set(player.x,terrainHeight(player.x,player.z)+1.7,player.z);
     }else this.controls.update();
+    const traveler=this.sim.game.player,body=this.playerBody;body.root.visible=this.mode!=='walk';body.root.position.set(traveler.x,terrainHeight(traveler.x,traveler.z),traveler.z);body.root.rotation.y=traveler.heading;body.ring.visible=true;const stride=traveler.moving&&!this.paused?Math.sin(t*10)*.58:0;body.leftLeg.rotation.x=stride;body.rightLeg.rotation.x=-stride;body.leftArm.rotation.x=-stride*.7;body.rightArm.rotation.x=stride*.7;
+    if(this.sim.game.intent&&this.mode==='orbit'){this.target.set(traveler.x,1,traveler.z);const delta=this.target.clone().sub(this.controls.target).multiplyScalar(Math.min(1,dt*2));this.controls.target.add(delta);this.camera.position.add(delta);this.controls.update();}
+    const destination=this.sim.game.destination;this.waypoint.visible=!!destination;if(destination){this.waypoint.position.set(destination.x,terrainHeight(destination.x,destination.z)+.07,destination.z);this.waypoint.scale.setScalar(1+Math.sin(t*3)*.06);}
+    for(const [id,root] of this.resourceMeshes){root.scale.setScalar(this.sim.game.nodes[id].charges>0?1:.28);}
+    for(const [id,roots] of this.projectMeshes){const built=this.sim.game.stats.projects.includes(id);roots.preview.visible=!built;roots.finished.visible=built;}
     this.camera.updateMatrixWorld();
     for(const a of this.sim.agents){const label=this.labels.get(a.id)!;this.temp.set(a.x,terrainHeight(a.x,a.z)+2.35,a.z).project(this.camera);const distance=this.camera.position.distanceTo(this.people.get(a.id)!.root.position);const visible=this.temp.z>-1&&this.temp.z<1&&Math.abs(this.temp.x)<.98&&Math.abs(this.temp.y)<.93&&distance<85;label.classList.toggle('hidden',!visible);if(visible){label.style.transform=`translate(${(this.temp.x*.5+.5)*this.width}px,${(-this.temp.y*.5+.5)*this.height}px) translate(-50%,-100%)`;label.style.zIndex=String(Math.round(100-distance));const speech=label.firstChild as HTMLElement;const show=!!a.speech&&distance<40;const small=this.width<700;speech.hidden=!show||(small&&a.id!==this.selected);if(speech.textContent!==a.speech)speech.textContent=a.speech;}}
+    for(const [id,{button,point,intent}] of this.adventureLabels){
+      this.temp.set(point.x,terrainHeight(point.x,point.z)+1.5,point.z).project(this.camera);
+      const done=intent.kind==='build'&&this.sim.game.stats.projects.includes(intent.id);const depleted=intent.kind==='gather'&&this.sim.game.nodes[intent.id].charges===0;
+      const active=this.sim.game.intent?.kind===intent.kind&&this.sim.game.intent?.id===intent.id;const near=this.sim.game.distance(point)<(this.width<700?13:22);
+      const visible=!done&&!depleted&&(near||active)&&this.temp.z>-1&&this.temp.z<1&&Math.abs(this.temp.x)<.96&&Math.abs(this.temp.y)<.91;
+      button.classList.toggle('hidden',!visible);button.classList.toggle('selected',active);if(visible)button.style.transform=`translate(${(this.temp.x*.5+.5)*this.width}px,${(-this.temp.y*.5+.5)*this.height}px) translate(-50%,-100%)`;
+    }
     this.water.material.uniforms.uTime.value=t;(this.fireMesh.material as THREE.ShaderMaterial).uniforms.time.value=t;
     this.fire.intensity=this.sim.weather==='rain'?0:23+Math.sin(t*13)*3+Math.sin(t*21)*2;this.fireMesh.scale.set(1+Math.sin(t*17)*.1,1+Math.sin(t*9)*.13,1);
     const sparks=this.particles.geometry.attributes.position;for(let i=0;i<sparks.count;i++){let y=sparks.getY(i)+dt*(.8+i%3*.2);if(y>4)y=.2;sparks.setY(i,y);sparks.setX(i,Math.sin(t*.7+i)*y*.1);}sparks.needsUpdate=true;
