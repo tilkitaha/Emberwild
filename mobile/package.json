@@ -1,0 +1,17 @@
+{
+  "name": "emberwild-ios",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "ios:add": "cap add ios",
+    "ios:sync": "cap sync ios",
+    "ios:open": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.5.0",
+    "@capacitor/ios": "8.5.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.0"
+  }
+}
