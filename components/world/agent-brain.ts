@@ -1,5 +1,6 @@
 import type { Agent, Memory } from './simulation';
-import { PLACES } from './simulation';
+
+export type PlaceId = 'camp'|'lodge'|'workshop'|'garden'|'woods'|'river'|'lookout';
 
 export type BrainWorld = {
   weather: 'clear' | 'rain';
@@ -12,7 +13,7 @@ export type BrainWorld = {
 };
 
 export type BrainPlan = {
-  place: keyof typeof PLACES;
+  place: PlaceId;
   goal: string;
   reason: string;
   score: number;
@@ -58,7 +59,7 @@ export function moodFor(agent: Agent) {
 
 export function planForAgent(agent: Agent, world: BrainWorld): BrainPlan {
   const candidates: BrainPlan[] = [];
-  const add = (place: keyof typeof PLACES, goal: string, reason: string, score: number) => candidates.push({ place, goal, reason, score });
+  const add = (place: PlaceId, goal: string, reason: string, score: number) => candidates.push({ place, goal, reason, score });
 
   if (world.weather === 'rain') add('lodge', 'Find shelter and use the quiet time to think ahead.', 'weather safety', 1000);
   if (world.gathering) add('camp', 'Join the settlement gathering and reconnect with everyone.', 'shared gathering', 920);
@@ -79,7 +80,6 @@ export function planForAgent(agent: Agent, world: BrainWorld): BrainPlan {
     candidates.push({ ...plan, score });
   }
 
-  // Small deterministic novelty bonus prevents every agent from repeating the same route forever.
   candidates.forEach((candidate, i) => {
     candidate.score += ((Math.floor(world.elapsed / 31) + i + agent.id.length) % 5) * 9;
     if (agent.destination === candidate.place) candidate.score -= 45;
@@ -131,15 +131,9 @@ export function composeAgentReply(agent: Agent, message: string, world: BrainWor
   const friend = topBond ? allAgents.find(a=>a.id===topBond[0]) : undefined;
   const rememberedPlayer = playerFacts.at(-1);
 
-  if (/\b(hello|hi|hey|merhaba|selam)\b/.test(lower)) {
-    return `Hello, traveler. I’m ${agent.name}. I’m feeling ${mood} today. ${agent.bio}`;
-  }
-  if (/remember|memory|memories|recall|hatır/.test(lower)) {
-    return memory ? `I do remember. ${memory.text}${rememberedPlayer ? ` And I remember something you told us: ${rememberedPlayer}.` : ''}` : 'I am still making my first memories here.';
-  }
-  if (/friend|relationship|who.*(like|know)|arkadaş/.test(lower)) {
-    return friend ? `${friend.name} is the person I feel closest to right now. We are at ${Math.round(topBond![1])}% trust, and our recent conversations have changed how I think about this place.` : 'I am still learning who I can rely on. Trust grows slowly here.';
-  }
+  if (/\b(hello|hi|hey|merhaba|selam)\b/.test(lower)) return `Hello, traveler. I’m ${agent.name}. I’m feeling ${mood} today. ${agent.bio}`;
+  if (/remember|memory|memories|recall|hatır/.test(lower)) return memory ? `I do remember. ${memory.text}${rememberedPlayer ? ` And I remember something you told us: ${rememberedPlayer}.` : ''}` : 'I am still making my first memories here.';
+  if (/friend|relationship|who.*(like|know)|arkadaş/.test(lower)) return friend ? `${friend.name} is the person I feel closest to right now. We are at ${Math.round(topBond![1])}% trust, and our recent conversations have changed how I think about this place.` : 'I am still learning who I can rely on. Trust grows slowly here.';
   if (/plan|goal|doing|working|help|job|planın|hedef/.test(lower)) {
     const plan = planForAgent(agent, world);
     return `Right now I want to ${plan.goal.charAt(0).toLowerCase()+plan.goal.slice(1)} I chose that because of ${plan.reason}, and I’m feeling ${mood}.`;
@@ -148,12 +142,8 @@ export function composeAgentReply(agent: Agent, message: string, world: BrainWor
     const plan = planForAgent(agent, world);
     return `Because I’m balancing what I need with what Mosswood needs. My strongest reason right now is ${plan.reason}. ${memory ? `I’m also thinking about this: ${memory.text}` : ''}`;
   }
-  if (/weather|rain|sun|hava|yağmur/.test(lower)) {
-    return world.weather === 'rain' ? 'The rain changes everyone’s priorities. Safety first, then work. I’ll use the shelter time to think about what comes next.' : 'The weather is calm enough to work or explore, so I can choose based on my needs instead of just reacting.';
-  }
-  if (/hungry|food|eat|dinner|supper|yemek|aç/.test(lower)) {
-    return `The settlement has about ${Math.floor(world.food)} portions in the shared stores. I’m at ${Math.round(agent.food)}% nourishment, so ${agent.food < 45 ? 'food is becoming one of my priorities.' : 'I can keep working for a while.'}`;
-  }
+  if (/weather|rain|sun|hava|yağmur/.test(lower)) return world.weather === 'rain' ? 'The rain changes everyone’s priorities. Safety first, then work. I’ll use the shelter time to think about what comes next.' : 'The weather is calm enough to work or explore, so I can choose based on my needs instead of just reacting.';
+  if (/hungry|food|eat|dinner|supper|yemek|aç/.test(lower)) return `The settlement has about ${Math.floor(world.food)} portions in the shared stores. I’m at ${Math.round(agent.food)}% nourishment, so ${agent.food < 45 ? 'food is becoming one of my priorities.' : 'I can keep working for a while.'}`;
   if (/who are|your name|yourself|kimsin/.test(lower)) return `I’m ${agent.name}, the ${agent.role.toLowerCase()}. ${agent.bio} My traits are ${agent.traits.join(' and ').toLowerCase()}.`;
   if (/thank|nice|beautiful|love|teşekkür|güzel/.test(lower)) return `That means something to me. ${rememberedPlayer ? `I haven’t forgotten what you told us about ${rememberedPlayer}.` : 'People become part of Mosswood through small moments like this.'}`;
 
