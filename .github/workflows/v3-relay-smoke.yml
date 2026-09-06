@@ -1,0 +1,63 @@
+name: Emberwild V3 Internet Multiplayer Smoke Test
+
+on:
+  push:
+    branches: [v3]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  relay-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+      - name: Install WebSocket smoke-test client
+        run: npm install --no-save --ignore-scripts ws@8
+      - name: Verify two independent internet clients can exchange room messages
+        run: |
+          node --input-type=module <<'EOF'
+          import WebSocket from 'ws';
+          import assert from 'node:assert/strict';
+
+          const channel = `emberwild-v3-ci-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const url = `wss://router.metapage.io/${channel}`;
+          const a = new WebSocket(url);
+          const b = new WebSocket(url);
+
+          const waitOpen = socket => new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('WebSocket open timeout')), 10000);
+            socket.once('open', () => { clearTimeout(timer); resolve(); });
+            socket.once('error', reject);
+          });
+
+          const receiveOnce = socket => new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('Relay message timeout')), 10000);
+            socket.once('message', data => { clearTimeout(timer); resolve(String(data)); });
+            socket.once('error', reject);
+          });
+
+          try {
+            await Promise.all([waitOpen(a), waitOpen(b)]);
+
+            const aToB = JSON.stringify({ type: 'state', player: { id: 'A', name: 'Traveler A', x: 3, z: 4 } });
+            const bReceive = receiveOnce(b);
+            a.send(aToB);
+            assert.equal(await bReceive, aToB);
+
+            const bToA = JSON.stringify({ type: 'chat', chat: { id: '1', playerId: 'B', playerName: 'Traveler B', text: 'Hello Mosswood' } });
+            const aReceive = receiveOnce(a);
+            b.send(bToA);
+            assert.equal(await aReceive, bToA);
+
+            console.log(`Internet multiplayer relay verified on ${channel}`);
+          } finally {
+            a.close();
+            b.close();
+          }
+          EOF
