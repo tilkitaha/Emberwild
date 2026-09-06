@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[53415,["https://raw.githack.com/tilkitaha/Emberwild/gh-pages/_next/static/chunks/0dbhjjzl8qfwv.js","https://raw.githack.com/tilkitaha/Emberwild/gh-pages/_next/static/chunks/0gg6a-wrr5llr.js","https://raw.githack.com/tilkitaha/Emberwild/gh-pages/_next/static/chunks/04rkarg6f6a.v.js"],"default"]
+3:I[97367,["https://raw.githack.com/tilkitaha/Emberwild/gh-pages/_next/static/chunks/0dbhjjzl8qfwv.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{}],[["$","script","script-0",{"src":"https://raw.githack.com/tilkitaha/Emberwild/gh-pages/_next/static/chunks/0gg6a-wrr5llr.js","async":true}],["$","script","script-1",{"src":"https://raw.githack.com/tilkitaha/Emberwild/gh-pages/_next/static/chunks/04rkarg6f6a.v.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"fzsKucVnuggqzIky0kaKI"}
+5:null
