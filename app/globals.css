@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
+/* Shared component scrolling utilities used by the journal and catalog. */
+@utility scrollbar-thin { scrollbar-width: thin; }
+@utility scrollbar-none { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+@utility scrollbar-gutter-stable { scrollbar-gutter: stable; }
 :root{--background:#101712;--foreground:#f5f2e8;--card:#18211b;--card-foreground:#f5f2e8;--popover:#18211b;--popover-foreground:#f5f2e8;--primary:#e9be7f;--primary-foreground:#172018;--secondary:#253127;--secondary-foreground:#f5f2e8;--muted:#253127;--muted-foreground:#a7b2a6;--accent:#314034;--accent-foreground:#f5f2e8;--destructive:#ea917d;--border:#ffffff20;--input:#ffffff28;--ring:#e9be7f;--radius:.7rem}
 @theme inline{--color-background:var(--background);--color-foreground:var(--foreground);--color-card:var(--card);--color-card-foreground:var(--card-foreground);--color-popover:var(--popover);--color-popover-foreground:var(--popover-foreground);--color-primary:var(--primary);--color-primary-foreground:var(--primary-foreground);--color-secondary:var(--secondary);--color-secondary-foreground:var(--secondary-foreground);--color-muted:var(--muted);--color-muted-foreground:var(--muted-foreground);--color-accent:var(--accent);--color-accent-foreground:var(--accent-foreground);--color-destructive:var(--destructive);--color-border:var(--border);--color-input:var(--input);--color-ring:var(--ring);--radius-sm:calc(var(--radius) - 4px);--radius-md:calc(var(--radius) - 2px);--radius-lg:var(--radius);--radius-xl:calc(var(--radius) + 4px);--font-sans:"Avenir Next",Avenir,"Segoe UI",sans-serif;--font-mono:ui-monospace,SFMono-Regular,monospace}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overscroll-behavior:none}body{background:var(--background);color:var(--foreground);font-family:"Avenir Next",Avenir,"Segoe UI",sans-serif;font-size:16px}button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:wait;opacity:.5}button:focus-visible,input:focus-visible{outline:2px solid #e9be7f;outline-offset:4px}button{touch-action:manipulation}button,input{-webkit-tap-highlight-color:transparent}button svg{flex-shrink:0}::selection{background:#a7723a;color:white}
@@ -26,3 +30,95 @@
 @media(max-height:650px) and (min-width:701px){.agent-sheet{top:98px}}
 
 .world-canvas{z-index:0}.world-shade{z-index:1}.topbar,.location,.roster,.compass,.bottom-hud,.world-badge,.explore-tip,.walk-controls,.crosshair{z-index:3}.event-dropdown{z-index:60}.topbar{isolation:isolate}
+
+/* A traveler joins the living world. */
+.location{display:none}
+.world-app[data-camera=walk] .roster,.world-app[data-camera=walk] .quest-card{display:none}
+.field-guide-toggle{position:absolute;top:28px;right:190px;z-index:4;color:#ecd0a1;background:#213829aa;border-color:#e5c08755}
+.traveler-status{position:absolute;z-index:3;top:122px;left:28px;width:208px;border-radius:13px;padding:13px 15px}
+.traveler-heading{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:none;border:0;color:#f0e8d6;cursor:pointer}
+.traveler-heading,.traveler-heading>span:nth-child(2){min-width:0}
+.traveler-heading small{display:block;color:#b6c9b8;font-size:12px;margin-bottom:4px}
+.traveler-heading strong{display:block;font-family:Georgia,serif;font-weight:400;font-size:20px;line-height:1.1}
+.traveler-symbol{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#a7ddbc19;color:#addbc5;flex-shrink:0}
+.traveler-symbol svg{width:17px;height:17px;transform:rotate(-25deg)}
+.level-number{margin-left:auto;font-variant-numeric:tabular-nums;color:#e8c68e;font-size:20px}
+.xp-meter{height:3px;margin:13px 0 11px;background:#b6d9c21c}
+.xp-meter [data-slot=progress-indicator]{background:#b4d6aa}
+.traveler-vitals{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#cbdbbf;gap:8px;white-space:nowrap}
+.traveler-vitals span,.traveler-vitals button{display:flex;align-items:center;gap:4px}
+.traveler-vitals button{background:none;border:0;color:inherit;padding:0;cursor:pointer}
+.traveler-vitals svg{width:13px;height:13px;color:#e0c28d}
+.roster{top:266px}
+.quest-card{position:absolute;right:28px;top:122px;z-index:3;width:306px;padding:20px;border-radius:14px;border-top:1px solid #ddc8994d}
+.quest-eyebrow{display:flex;align-items:center;justify-content:space-between;color:#d9bf8d;font-size:12px}
+.quest-eyebrow span{display:flex;align-items:center;gap:7px;letter-spacing:.07em;text-transform:uppercase}
+.quest-eyebrow svg{width:13px;height:13px}
+.quest-eyebrow button{display:flex;align-items:center;gap:5px;background:none;border:0;color:#bdc7ae;cursor:pointer;font-variant-numeric:tabular-nums}
+.quest-card h2{font-family:Georgia,serif;font-size:25px;font-weight:400;line-height:1.15;margin:15px 0 9px;color:#f3ecd9}
+.quest-card p{font-size:13px;line-height:1.6;color:#b8c8b3;margin:0 0 14px}
+.quest-checklist{display:flex;flex-direction:column;gap:9px;margin:13px 0 17px}
+.quest-checklist>div{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#d6dfc9;font-size:12px}
+.quest-checklist span{display:flex;align-items:center;gap:8px}
+.quest-checklist i{width:11px;height:11px;display:block;border:1px solid #afc0a566;border-radius:50%}
+.quest-checklist svg{width:12px;height:12px}
+.quest-checklist b{font-weight:400;color:#e5cda1;font-variant-numeric:tabular-nums}
+.quest-checklist .task-done,.quest-checklist .task-done b{color:#93c9a3}
+.journey-primary,.guide-action{display:flex;gap:8px;align-items:center;justify-content:flex-start;width:100%;min-height:40px;border:1px solid #d3bd9050;background:#d5bb881b;color:#efdaa8;padding:10px 12px;border-radius:7px;font-size:13px;text-align:left;cursor:pointer;transition:background .2s}
+.journey-primary{background:#ddc295;color:#243426;border-color:#ddc295}
+.journey-primary:hover{background:#efd4a9}
+.guide-action:hover{background:#d5bb8830}
+.journey-primary svg,.guide-action svg{width:15px;height:15px;flex-shrink:0}
+.journey-primary svg:last-child,.guide-action svg:last-child{margin-left:auto}
+.quest-tip{display:block;text-align:center;margin-top:10px;font-size:12px;line-height:1.45;color:#aebfa5}
+.journey-complete{border-top-color:#afd8bda0}
+.travel-status{position:absolute;z-index:4;bottom:181px;left:50%;transform:translateX(-50%);width:min(360px,calc(100% - 32px));padding:11px 14px;border-radius:10px}
+.travel-status>div:first-child{display:flex;gap:9px;align-items:center;font-size:13px;color:#f0dfb9}
+.travel-status svg{width:15px;height:15px;flex-shrink:0}
+.travel-status button{display:grid;place-items:center;width:28px;height:28px;margin-left:auto;background:none;color:#becdaf;border:0;cursor:pointer;flex-shrink:0}
+.travel-status [data-slot=progress]{height:3px;margin-top:5px;background:#ffffff18}
+.travel-status small{display:block;margin-top:5px;font-size:12px;color:#aabea5}
+.interact-button{position:absolute;z-index:4;bottom:221px;right:28px;display:flex;align-items:center;gap:9px;border-radius:9px;padding:12px 16px;font-size:14px;color:#f1ddba;cursor:pointer}
+.interact-button svg{width:16px;height:16px}.interact-button kbd{font:inherit;background:#ffffff15;padding:1px 6px;border-radius:4px}
+.interact-button:disabled{opacity:.5;cursor:default}
+.resource-label{background:#15271eed;border:1px solid #b7cd9b44!important;border-radius:15px;padding:6px 10px!important;color:var(--agent-color);font-size:12px;line-height:1.2;white-space:nowrap;box-shadow:0 3px 12px #0003}
+.resource-label:hover{background:#314a32;border-color:#b7cd9b99!important}
+.field-guide{width:460px!important;max-width:100vw!important;padding:25px;gap:18px}
+.field-guide [data-slot=sheet-header]{padding:4px 24px 0 0;gap:8px}
+.field-guide [data-slot=sheet-title]{font-family:Georgia,serif;font-size:32px;font-weight:400;color:#f0e7d2}
+.field-guide [data-slot=sheet-description]{font-size:13px;line-height:1.6;color:#b5c6ad}
+.guide-kicker{display:flex;gap:7px;align-items:center;color:#d8bc85;text-transform:uppercase;font-size:12px;letter-spacing:.07em;margin-bottom:8px}
+.guide-kicker svg{width:14px;height:14px}
+.guide-tabs{flex:1;min-height:0;gap:16px}
+.guide-tabs [data-slot=tabs-list]{width:100%;background:#ffffff08;border:1px solid #ffffff12;padding:4px;height:40px;flex-shrink:0}
+.guide-tabs [data-slot=tabs-trigger]{font-size:13px;color:#b6c7ac;flex:1;min-width:0;cursor:pointer}
+.guide-tabs [data-slot=tabs-trigger][data-state=active]{background:#d3be9220;color:#f3ddb0;box-shadow:none}
+.guide-tabs [data-slot=tabs-content]{padding:0 4px 6px 0;overflow-y:auto;min-height:0;scrollbar-width:thin}
+.guide-note{font-size:12px;line-height:1.6;color:#b1c0a9;display:block;margin:10px 0}
+.journey-overview{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px;color:#bacbb2;margin:6px 0 12px}
+.journey-overview strong{font-weight:500;color:#e2c698;white-space:nowrap}
+.chapter-card,.project-card,.camp-card{border:1px solid #ffffff16;border-radius:10px;padding:17px;margin:13px 0;background:#ffffff03}
+.chapter-card.current{background:#b7c19209;border-color:#d5b67f55}
+.chapter-heading{display:flex;gap:10px;align-items:center}.chapter-heading>span{width:23px;height:23px;border:1px solid #d6bc853b;border-radius:50%;display:grid;place-items:center;color:#dbc18c;font-size:12px;flex-shrink:0}.chapter-heading svg{width:13px;height:13px}.chapter-heading small{margin-left:auto;font-size:12px;color:#b7c99f;white-space:nowrap}
+.field-guide h3{font-family:Georgia,serif;font-weight:400;font-size:20px;color:#ede3cc;line-height:1.2;margin:0}
+.chapter-heading h3{font-size:18px}
+.chapter-card p,.project-card p,.camp-card p,.camp-intro p{font-size:13px;line-height:1.65;color:#b4c4ab;margin:9px 0 13px}
+.guide-footer{font-size:12px;color:#a8bda3;border-top:1px solid #ffffff14;padding:13px 0 0;margin:0;line-height:1.5;flex-shrink:0}
+.inventory-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:4px 0 20px}
+.inventory-grid>div{background:#ffffff05;border:1px solid #ffffff13;border-radius:8px;padding:13px 3px;text-align:center}
+.inventory-grid i,.resource-row>i{display:block;width:7px;height:7px;border-radius:50%;margin:0 auto 6px}
+.inventory-grid strong{display:block;color:#ede5d0;font-size:23px;font-family:Georgia,serif;font-weight:400}
+.inventory-grid span{font-size:12px;color:#b4c4ac;display:block;margin-top:4px}
+.map-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:#ddc28b}
+.map-heading span{display:flex;align-items:center;gap:5px}.map-heading svg{width:13px;height:13px}.map-heading small{color:#aabd9d;font-size:12px}
+.trail-map{display:block;width:100%;height:250px;border-radius:10px;background:#23362c;border:1px solid #a5bd9450}
+.map-spot{cursor:pointer}.map-spot:hover circle:last-child,.map-spot:focus circle:last-child{stroke:#fff;stroke-width:.5}.map-spot:focus{outline:none}
+.resource-row{display:flex;align-items:center;gap:11px;padding:14px 0;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #ffffff14;cursor:pointer;color:#e1d7be}
+.resource-row>i{margin:0;width:9px;height:9px;flex-shrink:0}.resource-row>span{min-width:0}.resource-row strong{display:block;font-size:14px;font-weight:500}.resource-row small{display:block;font-size:12px;color:#a9bca0;margin-top:5px}.resource-row>b{margin-left:auto;font-size:12px;font-weight:400;color:#c5d0b4;white-space:nowrap}.resource-row>svg{width:14px;height:14px;color:#cbb884;flex-shrink:0}.resource-row:hover strong{color:#e9c997}.resource-row:disabled{opacity:.5;cursor:default}
+.project-icon{display:flex;align-items:center;justify-content:space-between;color:#d9bd85;margin-bottom:17px}.project-icon svg{width:24px;height:24px}.project-icon span{font-size:12px}.project-cost{display:flex;gap:8px;margin:15px 0}.project-cost span{display:flex;gap:10px;align-items:center;border:1px solid #d29c7740;border-radius:5px;padding:6px 9px;font-size:12px;color:#d6b08e}.project-cost b{font-weight:500}.project-cost .enough{color:#b7d7a6;border-color:#b7d7a633}.camp-intro{display:flex;gap:12px;padding:10px 0}.camp-intro>svg{width:27px;height:27px;color:#e6b676;flex-shrink:0}.camp-intro h3{font-size:22px}.camp-energy{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#b9cba9;margin:8px 0 10px}.camp-energy span{display:flex;gap:5px;align-items:center}.camp-energy svg{width:13px;height:13px}.camp-energy strong{color:#e4cca0;font-weight:400}.recipe{display:flex;align-items:center;gap:7px;margin:12px 0 15px;color:#dabd87;font-size:12px;line-height:1.5}.recipe svg{width:14px;height:14px;flex-shrink:0}.guide-action:disabled{opacity:.5;cursor:default}
+.toast{top:auto;bottom:270px}
+@media(max-width:1000px){.field-guide-toggle{top:23px;right:177px}.traveler-status{left:20px;top:111px;width:190px}.quest-card{right:20px;top:111px;width:275px;padding:17px}.quest-card h2{font-size:23px}.roster{top:250px}.travel-status{bottom:179px}.toast{bottom:264px}.top-time{left:50%;transform:translateX(-50%);top:85px;position:absolute}.explore-tip{display:none}}
+@media(max-width:700px){.brand h1{font-size:17px}.brand-sub{letter-spacing:.13em}.field-guide-toggle{top:18px;right:143px}.top-time{top:73px;left:19px;transform:none}.traveler-status{top:110px;left:16px;right:16px;width:auto;padding:9px 12px;display:flex;align-items:center;gap:12px}.traveler-heading{width:auto;flex:1;gap:8px}.traveler-heading small{display:none}.traveler-heading strong{font-size:17px}.traveler-symbol{width:25px;height:25px}.traveler-symbol svg{width:14px;height:14px}.level-number{font-size:14px;margin-left:0}.traveler-status .xp-meter{display:none}.traveler-vitals{gap:11px;font-size:12px}.roster{top:176px}.quest-card{top:176px;right:16px;width:min(278px,calc(100% - 85px));padding:14px}.quest-card h2{font-size:22px;margin:12px 0 8px}.quest-card p{font-size:12px;line-height:1.5;margin-bottom:10px}.quest-checklist{margin:10px 0 12px;gap:7px}.quest-tip{font-size:12px}.quest-eyebrow span{letter-spacing:0;font-size:12px}.quest-eyebrow svg{width:12px}.journey-primary{font-size:12px;padding:9px;min-height:38px}.agent-sheet{top:176px}.travel-status{bottom:205px;padding:8px 12px}.travel-status>div:first-child{font-size:12px}.travel-status small{font-size:12px}.toast{bottom:286px;top:auto;font-size:12px}.walk-controls{bottom:286px}.interact-button{bottom:292px;right:17px;font-size:13px;padding:12px}.interact-button kbd{display:none}.field-guide{padding:19px}.field-guide [data-slot=sheet-title]{font-size:29px}.guide-kicker{font-size:12px;letter-spacing:.03em}.guide-footer{font-size:12px}.trail-map{height:235px}.resource-label{font-size:12px;padding:5px 8px!important}}
+@media(max-width:380px){.field-guide-toggle{right:129px}.brand h1{font-size:15px}.brand-sub{font-size:9px}.brand>svg{width:19px}.traveler-vitals{gap:7px}.traveler-heading strong{font-size:16px}.traveler-symbol{display:none}.quest-card{padding:12px}.quest-card h2{font-size:21px}.quest-eyebrow span{gap:4px}.guide-tabs [data-slot=tabs-trigger]{font-size:12px}.inventory-grid span{font-size:11px}}
+@media(max-height:740px) and (max-width:700px){.quest-card p,.quest-tip{display:none}.quest-card h2{font-size:20px;margin:9px 0}.quest-checklist{gap:5px;margin:9px 0}.roster{gap:3px}.resident-btn{height:34px;width:34px}.resident-btn .avatar{width:27px;height:27px;font-size:15px}.walk-controls{bottom:285px}.interact-button{bottom:290px}}
+@media(max-height:650px) and (min-width:701px){.traveler-status{top:108px;padding:10px 13px}.roster{top:239px;gap:3px}.quest-card{top:108px;padding:15px}.quest-card p{display:none}.quest-card h2{margin-top:10px}.travel-status{bottom:162px}.toast{bottom:240px}}

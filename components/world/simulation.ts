@@ -1,3 +1,4 @@
+import { Adventure } from './adventure';
 export type Point = { x: number; z: number };
 export type Memory = { text: string; time: number };
 export type WorldEvent = { id: number; time: number; speaker: string; text: string; kind: 'speech' | 'action' | 'world'; target?: string };
@@ -79,11 +80,13 @@ const PROFILES = [
 export function clockLabel(time: number) { const mins=Math.floor(time%1440);return `${String(Math.floor(mins/60)).padStart(2,'0')}:${String(mins%60).padStart(2,'0')}`; }
 const clamp=(n:number)=>Math.max(0,Math.min(100,n));
 export class Simulation {
+  game:Adventure;
   agents:Agent[];events:WorldEvent[]=[];time=16*60+20;elapsed=0;weather:'clear'|'rain'='clear';gatherings=0;wood=5;food=18;built=false;
   private serial=0;private rainUntil=0;private meetingUntil=0;private nextTalk=4;private pairs=new Map<string,number>();
   private replies:{at:number;agent:string;text:string;target:string}[]=[];
   constructor() {
     this.agents=PROFILES.map((p,i)=>({...p,heading:0,energy:74+i*3,food:71+i*2,social:64+i*4,activity:'Settling in',target:{x:p.x,z:p.z},destination:'camp',path:[],hold:i<2?9:0,nextDecision:2+i*3,memories:[{time:this.time,text:p.id==='ash'?'I arrived at Mosswood Hollow by the northern trail.':`I settled in Mosswood Hollow as its ${p.role.toLowerCase()}.`}],relationships:{},speech:'',speechUntil:0,moving:false,work:0,meetings:0}));
+    this.game=new Adventure(this,{findPath,walkable});
     this.log('world','Mosswood Hollow','The settlement wakes into a golden afternoon. Six lives, one shared clearing.');
   }
   snapshot():Snapshot {return {agents:this.agents,events:this.events,time:this.time,elapsed:this.elapsed,weather:this.weather,gatherings:this.gatherings,wood:this.wood,food:this.food,built:this.built};}
@@ -141,6 +144,7 @@ export class Simulation {
     for(const r of this.replies.filter(r=>r.at<=this.elapsed)){const a=this.agents.find(a=>a.id===r.agent)!;this.say(a,r.text,r.target);}
     this.replies=this.replies.filter(r=>r.at>this.elapsed);
     if(this.elapsed>this.nextTalk){this.nextTalk=this.elapsed+6;this.converse();}
+    this.game.step(dt);
   }
   private converse(){
     const candidates=this.agents.flatMap((a,i)=>this.agents.slice(i+1).map(b=>({a,b,d:Math.hypot(a.x-b.x,a.z-b.z)}))).filter(p=>p.d<4.8 && this.elapsed>p.a.hold && this.elapsed>p.b.hold && this.elapsed>(this.pairs.get([p.a.id,p.b.id].sort().join(':'))??-100)+32).sort((p,q)=>p.d-q.d);
@@ -204,16 +208,32 @@ export class Simulation {
     }else{
       reply='I know about life here in Mosswood. Ask about my plans, friends, or memories—or ask me to meet you by the fire.';
     }
-    this.remember(a,`The visitor said: “${text}”`);this.say(a,reply,'You');a.social=clamp(a.social+5);return reply;
+    this.game.meet(id);this.remember(a,`The visitor said: “${text}”`);this.say(a,reply,'You');a.social=clamp(a.social+5);return reply;
   }
-  save(){try{localStorage.setItem('emberwild-world-v1',JSON.stringify({...this.snapshot(),rainUntil:this.rainUntil,meetingUntil:this.meetingUntil,serial:this.serial}));return true;}catch{return false;}}
-  restore(){try{
-    const raw=localStorage.getItem('emberwild-world-v1');if(!raw)return false;
-    const d=JSON.parse(raw);
-    if(!Array.isArray(d.agents)||d.agents.length!==6||!Number.isFinite(d.time)||!Number.isFinite(d.elapsed)||!Number.isFinite(d.wood)||!Number.isFinite(d.food))return false;
-    if(!d.agents.every((a:Agent,i:number)=>a.id===PROFILES[i].id&&Number.isFinite(a.x)&&Number.isFinite(a.z)&&Math.abs(a.x)<45&&Math.abs(a.z)<45&&Array.isArray(a.memories)&&Array.isArray(a.path)&&typeof a.relationships==='object'&&Number.isFinite(a.energy)&&Number.isFinite(a.food)&&Number.isFinite(a.social)))return false;
-    this.agents=d.agents;this.events=Array.isArray(d.events)?d.events.slice(0,160):[];this.time=d.time;this.elapsed=d.elapsed;this.wood=d.wood;this.food=d.food;this.built=!!d.built;this.weather=d.weather==='rain'?'rain':'clear';this.gatherings=d.gatherings||0;this.rainUntil=d.rainUntil||0;this.meetingUntil=d.meetingUntil||0;this.serial=d.serial||0;this.nextTalk=this.elapsed+4;
-    for(const a of this.agents){a.speech='';a.speechUntil=0;}
-    return true;
-  }catch{return false;}}
+  save(){try{localStorage.setItem('emberwild-world-v2',JSON.stringify({...this.snapshot(),adventure:this.game.export(),rainUntil:this.rainUntil,meetingUntil:this.meetingUntil,serial:this.serial}));return true;}catch{return false;}}
+  restore(){
+    const count=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<1e10;
+    const point=(p:unknown):p is Point=>!!p&&typeof p==='object'&&Number.isFinite((p as Point).x)&&Number.isFinite((p as Point).z)&&Math.abs((p as Point).x)<45&&Math.abs((p as Point).z)<45;
+    for(const key of ['emberwild-world-v2','emberwild-world-v1']){try{
+      const raw=localStorage.getItem(key);if(!raw)continue;const d=JSON.parse(raw);
+      if(!d||!Array.isArray(d.agents)||d.agents.length!==6||![d.time,d.elapsed,d.wood,d.food].every(count))continue;
+      if(!d.agents.every((a:Agent,i:number)=>a&&a.id===PROFILES[i].id&&point(a)&&[a.energy,a.food,a.social].every(count)))continue;
+      const agents:Agent[]=d.agents.map((a:Agent,i:number)=>({
+        ...this.agents[i],...PROFILES[i],x:a.x,z:a.z,heading:Number.isFinite(a.heading)?a.heading:0,
+        energy:clamp(a.energy),food:clamp(a.food),social:clamp(a.social),
+        goal:typeof a.goal==='string'?a.goal.slice(0,400):PROFILES[i].goal,activity:typeof a.activity==='string'?a.activity.slice(0,100):'Settling in',
+        destination:typeof a.destination==='string'&&Object.hasOwn(PLACES,a.destination)?a.destination:'camp',
+        target:point(a.target)?{x:a.target.x,z:a.target.z}:{x:a.x,z:a.z},path:Array.isArray(a.path)?a.path.filter(point).slice(0,200).map(p=>({x:p.x,z:p.z})):[],
+        memories:Array.isArray(a.memories)?a.memories.filter(m=>m&&typeof m.text==='string'&&count(m.time)).slice(0,30).map(m=>({text:m.text.slice(0,1000),time:m.time})):[],
+        relationships:Object.fromEntries(Object.entries(a.relationships&&typeof a.relationships==='object'?a.relationships:{}).filter(([id,n])=>PROFILES.some(p=>p.id===id)&&count(n)).map(([id,n])=>[id,clamp(n)])),
+        hold:count(a.hold)?a.hold:0,nextDecision:count(a.nextDecision)?a.nextDecision:d.elapsed+2,work:count(a.work)?a.work:0,meetings:count(a.meetings)?a.meetings:0,speech:'',speechUntil:0,moving:false,
+      }));
+      const events:WorldEvent[]=Array.isArray(d.events)?d.events.filter((e:WorldEvent)=>e&&count(e.id)&&count(e.time)&&typeof e.speaker==='string'&&typeof e.text==='string'&&['world','action','speech'].includes(e.kind)&&(!e.target||typeof e.target==='string')).slice(0,160):[];
+      this.agents=agents;this.events=events;this.time=d.time;this.elapsed=d.elapsed;this.wood=d.wood;this.food=d.food;this.built=!!d.built;this.weather=d.weather==='rain'?'rain':'clear';this.gatherings=count(d.gatherings)?d.gatherings:0;this.rainUntil=count(d.rainUntil)?d.rainUntil:0;this.meetingUntil=count(d.meetingUntil)?d.meetingUntil:0;this.serial=Math.max(count(d.serial)?d.serial:0,...events.map(e=>e.id));this.nextTalk=this.elapsed+4;this.replies=[];this.pairs.clear();
+      this.game=new Adventure(this,{findPath,walkable});
+      if(d.adventure&&!this.game.import(d.adventure))this.game.notify('Your settlement is restored. Your traveler starts a fresh journey.');
+      return true;
+    }catch{ /* Try the earlier save without overwriting it. */ }}
+    return false;
+  }
 }
