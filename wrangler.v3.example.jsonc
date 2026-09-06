@@ -1,0 +1,24 @@
+{
+  // Example production configuration for Emberwild V3 internet multiplayer.
+  // Copy the relevant Durable Object section into the hosting configuration
+  // used by your deployment. This file is documentation and is not loaded by
+  // the current V2/V3 local build automatically.
+  "name": "emberwild-v3",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ROOM_HUB",
+        "class_name": "RoomHub"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v3-room-hub-1",
+      "new_sqlite_classes": ["RoomHub"]
+    }
+  ]
+}
