@@ -1,10 +1,15 @@
-/** Cloudflare Worker entry point for the vinext-starter template. */
+/** Cloudflare Worker entry point for Emberwild V3. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { RoomHub } from "./room-hub";
 
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  ROOM_HUB?: {
+    idFromName(name: string): unknown;
+    get(id: unknown): { fetch(request: Request): Promise<Response> };
+  };
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -19,15 +24,16 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
-// Image security config. SVG sources with .svg extension auto-skip the
-// optimization endpoint on the client side (served directly, no proxy).
-// To route SVGs through the optimizer (with security headers), set
-// dangerouslyAllowSVG: true in next.config.js and uncomment below:
-// const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
-
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname === "/multiplayer") {
+      if (!env.ROOM_HUB) return new Response("Multiplayer room binding is not configured", { status: 503 });
+      const room = (url.searchParams.get("room") || "MOSSWOOD").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
+      const id = env.ROOM_HUB.idFromName(room || "MOSSWOOD");
+      return env.ROOM_HUB.get(id).fetch(request);
+    }
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
@@ -44,4 +50,5 @@ const worker = {
   },
 };
 
+export { RoomHub };
 export default worker;

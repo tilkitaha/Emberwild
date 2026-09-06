@@ -1,0 +1,26 @@
+[data-version="v3"] .v3-tag{font-size:.46em;vertical-align:super;letter-spacing:.08em;opacity:.72;margin-left:.25rem}
+[data-version="v3"] .voice-btn{display:grid;place-items:center;min-width:42px}
+[data-version="v3"] .voice-btn.listening{animation:v3Pulse 1s ease-in-out infinite}
+[data-version="v3"] .voice-status{display:flex;align-items:center;gap:.45rem;font-size:.78rem;opacity:.82;margin:.55rem 0 0}
+[data-version="v3"] .voice-error{border:1px solid rgba(255,190,150,.24);background:rgba(83,35,22,.28);border-radius:10px;padding:.65rem .7rem;color:#f2cfb5}
+[data-version="v3"] .multiplayer-top-btn{width:43px;overflow:hidden;white-space:nowrap}
+[data-version="v3"] .multiplayer-top-btn span{display:none}
+.v3-online-dot{display:inline-block;width:8px;height:8px;border-radius:999px;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 18%,transparent)}
+.v3-multiplayer{position:fixed;top:86px;right:20px;z-index:65;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 120px);display:flex;flex-direction:column;gap:.8rem;padding:1rem;border-radius:20px;overflow:hidden;backdrop-filter:blur(24px)}
+.v3-panel-title{display:flex;align-items:center;justify-content:space-between}.v3-panel-title>span{display:flex;align-items:center;gap:.55rem;font-weight:700}.v3-panel-title button{background:transparent;border:0;color:inherit;cursor:pointer}
+.v3-room-setup{display:grid;gap:.75rem}.v3-room-setup label{display:grid;gap:.35rem;font-size:.76rem;opacity:.92}.v3-room-setup input,.v3-player-chat input,.v3-room-row input{width:100%;border:1px solid rgba(255,255,255,.13);background:rgba(16,24,21,.45);color:inherit;border-radius:11px;padding:.7rem .75rem;outline:none}.v3-room-row{display:flex;gap:.45rem}.v3-room-row button,.v3-room-status button{border:0;border-radius:10px;padding:0 .7rem;cursor:pointer}.v3-primary{display:flex;align-items:center;justify-content:center;gap:.45rem;border:0;border-radius:12px;padding:.75rem;cursor:pointer;font-weight:700}.v3-room-setup p{font-size:.72rem;line-height:1.45;opacity:.66;margin:0}
+.v3-room-status{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.6rem;font-size:.76rem}.v3-room-status span{opacity:.65;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.v3-player-list{display:grid;gap:.4rem;max-height:150px;overflow:auto}.v3-player-list>div{display:grid;grid-template-columns:auto 1fr;column-gap:.5rem;align-items:center;padding:.5rem .55rem;border-radius:11px;background:rgba(255,255,255,.045)}.v3-player-list small{grid-column:2;font-size:.67rem;opacity:.6}.v3-chat-log{min-height:90px;max-height:180px;overflow:auto;padding:.55rem;border-radius:12px;background:rgba(0,0,0,.12)}.v3-chat-log p{font-size:.76rem;margin:.35rem 0;line-height:1.35}.v3-player-chat{display:flex;gap:.45rem}.v3-player-chat button{width:42px;border:0;border-radius:11px;display:grid;place-items:center;cursor:pointer}
+.v3-remote-label{position:absolute;left:0;top:0;pointer-events:none;z-index:30;padding:.24rem .48rem;border-radius:999px;background:rgba(16,25,22,.74);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px);font-size:.68rem;font-weight:700;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.18)}.v3-remote-label.hidden{display:none}
+@keyframes v3Pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.65}}
+@media(max-width:700px){
+  [data-version="v3"] .top-actions{position:absolute;right:14px;top:16px;z-index:80}
+  [data-version="v3"] .secondary-top-action{display:none}
+  [data-version="v3"] .multiplayer-top-btn{display:inline-flex;width:auto!important;height:38px;border-radius:999px;padding:0 13px;gap:7px;background:#e7c78f;color:#172319;border-color:#e7c78f;font-size:12px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+  [data-version="v3"] .multiplayer-top-btn span{display:inline}
+  [data-version="v3"] .brand{max-width:150px}
+  [data-version="v3"] .brand-sub{max-width:110px;line-height:1.2}
+  .v3-multiplayer{top:66px;right:10px;left:10px;width:auto;max-height:calc(100dvh - 82px);overflow:auto}
+  .v3-chat-form{grid-template-columns:1fr auto auto}
+  .v3-remote-label{font-size:.6rem}
+}
+@media(max-width:380px){[data-version="v3"] .multiplayer-top-btn{padding:0 10px;font-size:11px}[data-version="v3"] .multiplayer-top-btn svg{width:14px;height:14px}}
