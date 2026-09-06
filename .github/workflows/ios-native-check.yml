@@ -1,0 +1,58 @@
+name: Emberwild iOS Native Check
+
+on:
+  push:
+    branches: [ios-release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios-simulator:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Build App Store-safe web bundle
+        env:
+          NEXT_PUBLIC_APP_STORE_BUILD: "1"
+        run: npx next build
+
+      - name: Install Capacitor wrapper
+        working-directory: mobile
+        run: npm install
+
+      - name: Generate iOS project
+        working-directory: mobile
+        run: npx cap add ios
+
+      - name: Configure iOS permission strings
+        working-directory: mobile
+        run: |
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string Emberwild uses the microphone only when you choose to speak with an inhabitant." ios/App/App/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :NSSpeechRecognitionUsageDescription string Emberwild converts your spoken words into text so inhabitants can respond." ios/App/App/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist || true
+
+      - name: Sync web assets into iOS
+        working-directory: mobile
+        run: npx cap sync ios
+
+      - name: Build unsigned iOS simulator app
+        working-directory: mobile
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO \
+            build

@@ -1,9 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Emberwild — A Living World",
   description: "Enter a woodland settlement where six autonomous inhabitants explore, form friendships, and remember their encounters.",
+  applicationName: "Emberwild",
+  appleWebApp: {
+    capable: true,
+    title: "Emberwild",
+    statusBarStyle: "black-translucent",
+  },
   other: {
     "codex-preview": "development",
   },
@@ -11,6 +17,13 @@ export const metadata: Metadata = {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#101916",
 };
 
 export default function RootLayout({
