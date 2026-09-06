@@ -1,30 +1,41 @@
 # Emberwild V3 — A Shared Living World
 
+[Play the current V3 preview](https://raw.githack.com/tilkitaha/Emberwild/v3-preview/index.html)
+
 Emberwild V3 evolves the V2 settlement adventure into a social, voice-enabled world with smarter autonomous inhabitants.
 
-> V1 proved the living-world concept. V2 added a real game loop. V3 adds multiplayer infrastructure, synchronized 3D travelers, microphone conversations, voice replies, stronger memory retrieval, player facts, relationship-aware dialogue, and a weighted autonomous decision planner.
+> V1 proved the living-world concept. V2 added a real game loop. V3 adds cross-device multiplayer, microphone conversations, spoken NPC replies, stronger memory retrieval, player facts, relationship-aware dialogue, visible remote travelers, and a weighted autonomous decision planner.
 
 ## V3 headline features
 
-### Multiplayer rooms
+### Internet multiplayer rooms — live in the preview
 
-- Join by traveler name + room code.
-- Sync player position, heading, level, activity, presence and room chat.
-- Remote players are rendered as traveler avatars inside the Three.js world, with names and levels above them.
-- WebSocket transport for internet multiplayer through the V3 room server.
-- Same-browser `BroadcastChannel` fallback lets two tabs test multiplayer immediately without a server.
+Two people on different phones/computers can now open the V3 preview, enter the **same room code**, and join the same Emberwild multiplayer channel.
 
-The client reads the production WebSocket endpoint from:
+V3 synchronizes:
+
+- traveler name,
+- player position,
+- heading,
+- level,
+- current activity,
+- online presence,
+- room chat,
+- visible remote traveler avatars in the Three.js world.
+
+The public preview uses a zero-account WebSocket relay when no custom server URL is configured. Room traffic is ephemeral: the relay forwards live messages to the other clients in the same channel and does not provide world persistence/history. The room code acts as the channel identifier, so do not use the public preview for sensitive/private information.
+
+For a dedicated production deployment, the repository still includes `worker/room-hub.ts` and the Durable Object configuration example. Set:
 
 ```bash
-NEXT_PUBLIC_EMBERWILD_WS_URL=wss://your-host.example/multiplayer
+NEXT_PUBLIC_EMBERWILD_WS_URL=wss://your-own-room-server.example/multiplayer
 ```
 
-The repository includes `worker/room-hub.ts` and the `/multiplayer` routing logic needed for a Cloudflare Durable Object room server. The Durable Object binding must be configured in the production hosting environment before internet rooms are considered live.
+and the same client automatically uses the private/self-hosted room server instead of the public relay.
 
 ### Smarter autonomous agents
 
-V3 adds a separate cognition layer on top of the V2 simulation. Inhabitants now score competing priorities instead of relying only on fixed route rotation.
+V3 adds a separate cognition layer on top of the V2 simulation. Inhabitants score competing priorities instead of relying only on fixed route rotation.
 
 Inputs include:
 
@@ -40,20 +51,11 @@ Inputs include:
 - whether a settlement gathering is happening,
 - what the agent was already doing.
 
-The resulting plan includes a destination, goal, reason and score. Agents also remember why they selected important actions.
+The resulting plan includes a destination, goal, reason and score. Agents can remember why they selected important actions.
 
 ### Memory-aware conversations
 
-Dialogue now uses:
-
-- relevant memory retrieval,
-- mood,
-- current autonomous plan,
-- role and personality traits,
-- strongest relationship,
-- settlement resources,
-- weather,
-- facts the traveler explicitly tells the inhabitants.
+Dialogue uses relevant memories, mood, current autonomous plan, role/personality traits, strongest relationships, settlement resources, weather, and facts the traveler explicitly tells the inhabitants.
 
 Examples:
 
@@ -69,13 +71,12 @@ Player facts are saved locally and carried across sessions alongside the V2 worl
 
 Open an inhabitant and press the microphone button.
 
-- Browser speech recognition converts speech to text.
-- The message is sent directly to the selected inhabitant.
-- The V3 cognition layer produces the reply.
-- Browser speech synthesis reads the answer aloud.
-- Typing still works normally.
+1. Browser speech recognition converts your speech to text.
+2. The message goes to the selected inhabitant.
+3. The V3 cognition layer produces the reply.
+4. Browser speech synthesis reads the answer aloud.
 
-Microphone access requires browser permission and a secure origin in production.
+Typing still works normally. Microphone access requires browser permission and a secure origin.
 
 ## V2 gameplay retained
 
@@ -102,14 +103,14 @@ V3 keeps the settlement adventure underneath the new systems:
 - `components/world/simulation-v3.ts` — cognition layer connected to the V2 simulation.
 - `components/world/agent-brain.ts` — weighted planning, memory retrieval and contextual response generation.
 - `components/world/use-voice-chat.ts` — microphone speech recognition and spoken NPC replies.
-- `components/world/multiplayer.ts` — multiplayer room client, presence, state and room chat.
+- `components/world/multiplayer.ts` — internet room client, reconnects, presence, state and room chat.
 - `components/world/multiplayer-panel.tsx` — room UI.
-- `components/world/scene-v3.ts` — synchronized remote travelers rendered in 3D.
-- `worker/room-hub.ts` — WebSocket room hub.
-- `worker/index.ts` — routes `/multiplayer` to the room hub.
+- `components/world/scene-v3.ts` — visible remote traveler avatars.
+- `worker/room-hub.ts` — optional dedicated WebSocket room hub.
+- `wrangler.v3.example.jsonc` — production Durable Object binding/migration example.
 - `app/v3.css` — V3 UI additions.
 
-See **[V3_DEVELOPMENT.md](./V3_DEVELOPMENT.md)** for the implementation stages and current production limitations.
+See **[V3_DEVELOPMENT.md](./V3_DEVELOPMENT.md)** for the implementation stages.
 
 ## Run locally
 
@@ -120,17 +121,16 @@ npm ci
 npm run dev
 ```
 
-To test multiplayer without a room server, open the game in two browser tabs and join the same room code. Each tab's traveler will appear as a remote 3D avatar in the other tab.
+Open two devices, use the same V3 URL and join the same room code to test cross-device multiplayer.
 
 ## Verification
 
-The `v3` branch has its own GitHub Actions workflow:
+The `v3` branch has automated GitHub Actions checks for:
 
-```text
-Emberwild V3 CI
-```
-
-It runs the repository's verified production build and all Emberwild gameplay/UI tests.
+- production build,
+- existing Emberwild gameplay tests,
+- V3 preview publishing,
+- a live internet relay smoke test using two independent WebSocket clients.
 
 ## Current V3 status
 
@@ -139,9 +139,9 @@ It runs the repository's verified production build and all Emberwild gameplay/UI
 - Microphone transcription: implemented.
 - Spoken NPC replies: implemented.
 - Room/presence/chat client: implemented.
-- Local two-tab multiplayer fallback: implemented.
-- Visible synchronized 3D remote player avatars: implemented.
-- WebSocket room server code: implemented.
-- Production internet multiplayer: requires deployment with `ROOM_HUB` Durable Object binding + `NEXT_PUBLIC_EMBERWILD_WS_URL`.
-- Shared server-authoritative resources/construction: planned for the next co-op pass.
+- Cross-device internet rooms: implemented in the public preview.
+- Visible 3D remote player avatars: implemented.
+- Automatic multiplayer reconnect: implemented.
+- Dedicated self-hosted WebSocket/Durable Object server: code/config included, deployment optional.
+- Shared authoritative resources/building state: future co-op iteration.
 - Live LLM-backed NPCs: not connected yet; current V3 intelligence runs locally and requires no API key.
