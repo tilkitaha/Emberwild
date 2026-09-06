@@ -2,7 +2,7 @@
 
 Emberwild V3 evolves the V2 settlement adventure into a social, voice-enabled world with smarter autonomous inhabitants.
 
-> V1 proved the living-world concept. V2 added a real game loop. V3 adds multiplayer infrastructure, microphone conversations, voice replies, stronger memory retrieval, player facts, relationship-aware dialogue, and a weighted autonomous decision planner.
+> V1 proved the living-world concept. V2 added a real game loop. V3 adds multiplayer infrastructure, synchronized 3D travelers, microphone conversations, voice replies, stronger memory retrieval, player facts, relationship-aware dialogue, and a weighted autonomous decision planner.
 
 ## V3 headline features
 
@@ -10,9 +10,9 @@ Emberwild V3 evolves the V2 settlement adventure into a social, voice-enabled wo
 
 - Join by traveler name + room code.
 - Sync player position, heading, level, activity, presence and room chat.
+- Remote players are rendered as traveler avatars inside the Three.js world, with names and levels above them.
 - WebSocket transport for internet multiplayer through the V3 room server.
 - Same-browser `BroadcastChannel` fallback lets two tabs test multiplayer immediately without a server.
-- Room traffic is intentionally lightweight so it can later support visible remote avatars and shared co-op actions.
 
 The client reads the production WebSocket endpoint from:
 
@@ -104,6 +104,7 @@ V3 keeps the settlement adventure underneath the new systems:
 - `components/world/use-voice-chat.ts` — microphone speech recognition and spoken NPC replies.
 - `components/world/multiplayer.ts` — multiplayer room client, presence, state and room chat.
 - `components/world/multiplayer-panel.tsx` — room UI.
+- `components/world/scene-v3.ts` — synchronized remote travelers rendered in 3D.
 - `worker/room-hub.ts` — WebSocket room hub.
 - `worker/index.ts` — routes `/multiplayer` to the room hub.
 - `app/v3.css` — V3 UI additions.
@@ -119,7 +120,7 @@ npm ci
 npm run dev
 ```
 
-To test multiplayer without a room server, open the game in two browser tabs and join the same room code.
+To test multiplayer without a room server, open the game in two browser tabs and join the same room code. Each tab's traveler will appear as a remote 3D avatar in the other tab.
 
 ## Verification
 
@@ -129,7 +130,7 @@ The `v3` branch has its own GitHub Actions workflow:
 Emberwild V3 CI
 ```
 
-It installs dependencies, runs the production Next.js build and executes the existing Emberwild gameplay tests.
+It runs the repository's verified production build and all Emberwild gameplay/UI tests.
 
 ## Current V3 status
 
@@ -139,7 +140,8 @@ It installs dependencies, runs the production Next.js build and executes the exi
 - Spoken NPC replies: implemented.
 - Room/presence/chat client: implemented.
 - Local two-tab multiplayer fallback: implemented.
+- Visible synchronized 3D remote player avatars: implemented.
 - WebSocket room server code: implemented.
 - Production internet multiplayer: requires deployment with `ROOM_HUB` Durable Object binding + `NEXT_PUBLIC_EMBERWILD_WS_URL`.
-- Visible 3D remote player avatars: next V3 multiplayer iteration.
+- Shared server-authoritative resources/construction: planned for the next co-op pass.
 - Live LLM-backed NPCs: not connected yet; current V3 intelligence runs locally and requires no API key.
