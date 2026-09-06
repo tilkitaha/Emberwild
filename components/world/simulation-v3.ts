@@ -1,15 +1,17 @@
 import { Simulation } from './simulation';
 import { composeAgentReply, extractPlayerFact, planForAgent, relationshipAfterConversation, type BrainWorld } from './agent-brain';
+import { V4Progression } from './v4-progression';
 
 const positiveLanguage = /thank|thanks|nice|great|love|beautiful|helpful|teşekkür|sağ ol|güzel|harika/i;
 
 export class SimulationV3 extends Simulation {
   private nextBrainTick = 8;
   private playerFacts: string[] = [];
+  readonly progression = new V4Progression();
 
   constructor() {
     super();
-    this.log('world', 'Mosswood Intelligence', 'V3 agent cognition is active: needs, roles, memories and relationships now compete when inhabitants choose what to do next.');
+    this.log('world', 'Mosswood Intelligence', 'V4 progression is active: the settlement now remembers your reputation, daily contributions and trust with each inhabitant.');
   }
 
   private brainWorld(): BrainWorld {
@@ -26,12 +28,11 @@ export class SimulationV3 extends Simulation {
 
   step(dt: number) {
     super.step(dt);
+    this.progression.observeAdventure(this.game.stats, this.game.player);
     if (dt <= 0 || this.elapsed < this.nextBrainTick) return;
     this.nextBrainTick = this.elapsed + 15;
 
     const world = this.brainWorld();
-    // Re-plan only idle inhabitants so V3 cognition enriches, rather than fights,
-    // the original V2 simulation and its scripted world events.
     const idle = this.agents
       .filter(a => !a.moving && a.path.length === 0 && a.hold <= this.elapsed)
       .sort((a,b) => (a.nextDecision - this.elapsed) - (b.nextDecision - this.elapsed))
@@ -54,16 +55,26 @@ export class SimulationV3 extends Simulation {
 
     this.log('speech', 'You', text, agent.name);
     const lower = text.toLowerCase();
+    const positive = positiveLanguage.test(text);
+    const trustBefore = this.progression.trustFor(id);
     let reply: string;
 
     if (/\b(go|come|meet|gather|join)\b/.test(lower) && /fire|camp|together/.test(lower)) {
       this.go(agent, 'camp', 'Meet the traveler at the campfire and continue the conversation there.');
-      reply = 'I’ll meet you by the campfire. I want to hear the rest there.';
+      reply = trustBefore >= 40 ? 'I trust you. I’ll meet you by the campfire and we can talk there.' : 'I’ll meet you by the campfire. I want to hear the rest there.';
     } else if (/\b(rest|sleep|tired|shelter)\b/.test(lower)) {
       this.go(agent, 'lodge', 'Take the traveler’s advice, recover, and reconsider the next priority.');
       reply = 'You’re right. I’ll rest at the lodge, then decide what matters next.';
+    } else if (/trust|güven/.test(lower)) {
+      const label = this.progression.trustLabel(id);
+      reply = trustBefore >= 50
+        ? `You’ve become someone I ${label}. You show up, help the Hollow, and I remember that.`
+        : trustBefore >= 20
+          ? `We’re becoming familiar. I’m beginning to trust you, but trust grows through what you do here.`
+          : `We’re still learning who each other are. Stay, help the settlement, and give me reasons to remember you.`;
     } else {
       reply = composeAgentReply(agent, text, this.brainWorld(), this.playerFacts, this.agents);
+      if (trustBefore >= 70 && /remember|friend|closest|know about me/i.test(lower)) reply += ' You are no longer just a traveler passing through to me.';
     }
 
     const fact = extractPlayerFact(text);
@@ -75,12 +86,11 @@ export class SimulationV3 extends Simulation {
     }
 
     this.game.meet(id);
+    this.progression.recordConversation(id, agent.name, text, positive);
     this.remember(agent, `The traveler said: “${text}”`);
     this.say(agent, reply, 'You');
     agent.social = Math.min(100, agent.social + 6);
 
-    // A conversation now changes trust, not just a generic social meter.
-    const positive = positiveLanguage.test(text);
     for (const other of this.agents) {
       if (other.id === agent.id) continue;
       if (Math.hypot(other.x-agent.x, other.z-agent.z) < 5) {

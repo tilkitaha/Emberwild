@@ -2,7 +2,7 @@ name: Emberwild iOS Native Check
 
 on:
   push:
-    branches: [ios-release]
+    branches: [ios-release, v4]
   workflow_dispatch:
 
 permissions:

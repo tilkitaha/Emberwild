@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Emberwild — A Living World",
-  description: "Enter a woodland settlement where six autonomous inhabitants explore, form friendships, and remember their encounters.",
+  title: "Emberwild V4 — A Persistent Living World",
+  description: "Explore Mosswood, build your reputation, earn the trust of autonomous inhabitants, complete daily missions, and share the world with other travelers.",
   applicationName: "Emberwild",
   appleWebApp: {
     capable: true,
